@@ -1,10 +1,11 @@
 import jwt from 'jsonwebtoken'
-import { User } from '../models/user.model.js';
+import { User } from '../models/index.js';
+import { env } from '../config/env.js';
 
 
 export const verifyEmail = async (req, res, next) => {
   try {
-    const token = req.body.token;
+    const token = req.body?.token;
     if (!token) {
       return res.status(400).send({ message: "Verification token missing" });
     }

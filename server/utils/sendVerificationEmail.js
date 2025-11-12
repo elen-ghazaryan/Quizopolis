@@ -16,11 +16,11 @@ export const sendVerificationEmail = async (user) => {
 
     // Send email
     await transporter.sendMail({
-      from: `"QuizMaster" <${env.APP_EMAIL}>`,
+      from: `"Quizopolis" <${env.APP_EMAIL}>`,
       to: user.email,
       subject: "Confirm your email",
       html: `
-        <h2>Hello, ${user.name}!</h2>
+        <h2>Hello, ${user.username}!</h2>
         <p>Click the link below to confirm your email:</p>
         <a href="${verificationLink}" style="
           display:inline-block;

@@ -1,5 +1,5 @@
 import mongoose from "mongoose"
-import { User } from "../models/user.model.js"
+import { User } from "../models/index.js"
 import jwt from "jsonwebtoken"
 import { env } from "../config/env.js"
 import bcrypt from "bcrypt"
@@ -7,13 +7,13 @@ import { sendVerificationEmail } from "../utils/sendVerificationEmail.js"
 import { sendResetPswLink } from "../utils/sendResetPswLink.js"
 
 
-class UserController {
+class AuthController {
   async signup (req, res) {
     if(!req.body) return res.status(400).send({ message: "Empty request body"})
 
-    const { name, surname, username, email, password, role = 'user' } = req.body
+    const { username, email, password, role = 'student' } = req.body
 
-    if(!name?.trim() ||!surname?.trim() || !username?.trim() || !email?.trim() || !password?.trim()) {
+    if(!username?.trim() || !email?.trim() || !password?.trim()) {
       return res.status(400).send({ message: "All fields are required"})
     }
 
@@ -21,13 +21,13 @@ class UserController {
 
     if (!passwordRegex.test(password)) {
       return res.status(400).json({
-        message: "Password must contain minimum eight characters, at least one upper case letter, one lower case letter, one number and one special character."
+        message: "Password must contain minimum 8 characters, at least one upper case letter, one lower case letter, one number and one special character."
       });
     }
 
     try {
       const hashed = await bcrypt.hash(password, 10)
-      const user = new User({ name, surname, username, email, password: hashed, role})
+      const user = new User({ username, email, password: hashed, role })
       await user.save()
       
       await sendVerificationEmail(user)
@@ -90,12 +90,26 @@ class UserController {
 
     user.isEmailVerified = true;
     await user.save()
-    res.send({ message: "Email successfully verified" })
+    
+    const token = jwt.sign(
+      { sub: user._id },
+      env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "Strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+    res.send({ message: "Email successfully verified and logged in" });
   }
 
 
   async resendVerification(req, res) {
-    const { email } = req.body;
+    const { email } = req.body || {};
+    if(!email) return res.status(400).send({ message: "Email is required" });
 
     const user = await User.findOne({ email });
     if (!user) return res.status(404).send({ message: "User not found" });
@@ -105,13 +119,7 @@ class UserController {
     }
 
     await sendVerificationEmail(user);
-    return res.json({ message: "Verification email resent" });
-  }
-
-
-  async getCurrentUser (req, res) {
-    const {name, surname, email, username, role, isEmailVerified} = req.user
-    return res.send({ message:"Ok", payload: {name, surname, email, username, isEmailVerified, role } })
+    return res.json({ message: "Verification email resent to " + email });
   }
 
 
@@ -166,27 +174,6 @@ class UserController {
     }
   }
 
-  
-  async updatePassword(req, res) {
-    const user = req.user
-    const { oldPassword, newPassword } = req.body || {}
-
-    if(!oldPassword?.trim() || !newPassword?.trim()) {
-      return res.status(400).send({ message: "Email, old password and new password are required!"})
-    }
-
-    const isMatch = await bcrypt.compare(oldPassword, user.password)
-    if(!isMatch) {
-      return res.status(400).send( { message: "Wrong user credentials" })
-    }
-
-    const hashed = await bcrypt.hash(newPassword, 10)
-    user.password = hashed
-    await user.save()
-    res.send({ message: "Password has been successfully changed" })
-
-  }
-
 
   async logout(req, res) {
      res.clearCookie("token", {
@@ -199,7 +186,7 @@ class UserController {
 
 }
 
-export default new UserController()
+export default new AuthController()
 
 
 

@@ -2,7 +2,6 @@ import express from "express";
 import controller from "../controllers/authController.js"
 import { isAuthenticated } from "../middlewares/isAuthenticated.js";
 import { verifyEmail } from "../middlewares/verifyEmail.js";
-import { isEmailVerified } from "../middlewares/isEmailVerified.js";
 
 export const authRouter = express.Router()
 
@@ -19,10 +18,5 @@ authRouter.post("/verify/resend", controller.resendVerification)
 authRouter.post("/forgot-password", controller.forgotPassword)
 authRouter.post("/reset-password", controller.resetPassword)
 
-authRouter.use(isAuthenticated)
-authRouter.use(isEmailVerified)
 
-//protected routes
-authRouter.get("/user", controller.getCurrentUser)
-authRouter.patch("/update-password", controller.updatePassword)
 

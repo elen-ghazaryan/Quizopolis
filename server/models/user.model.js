@@ -1,17 +1,7 @@
-import mongoose from "./index.js";
+import {Schema, model} from "mongoose"
 import validator from "validator";
 
-const userSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: [true, "Name is required"],
-    trim: true
-  },
-  surname: {
-    type: String,
-    required: [true, "Surname is required"],
-    trim: true
-  },
+const userSchema = new Schema({
   username: {
     type: String,
     required: [true, "Username is required"],
@@ -32,13 +22,18 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ["user", "admin"],
-    default: "user"
+    enum: ["teacher", "student"],
+    default: "student"
   },
   isEmailVerified: {
     type: Boolean,
     default: false
-  }
+  },
+  avatar: {type: String, default: ""},
+
+  //streak
+  currentStreak: { type: Number, default:0 },
+  lastQuizDate: Date
 });
 
-export const User = mongoose.model("User", userSchema);
+export default model("User", userSchema);

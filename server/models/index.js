@@ -1,10 +1,13 @@
-import mongoose from "mongoose";
-import { env } from "../config/env.js";
+import User from './user.model.js';
+import Quiz from './quiz.model.js';
+import Question from './question.model.js';
+import QuizAttempt from './quizAttempt.model.js';
+import Comment from './comments.model.js';
 
-
-mongoose
-  .connect(`mongodb://localhost:27017/${env.DB_NAME}`)
-  .then(() => console.log("MongoDB connected"))
-  .catch(err => console.error("Connection error:", err));
-
-export default mongoose;
+export {
+  User,
+  Quiz,
+  Question,
+  QuizAttempt,
+  Comment
+};

@@ -1,25 +1,54 @@
-import express from "express"
-import cors from "cors"
-import { authRouter } from "./routes/auth.js"
-import { env } from "./config/env.js"
+import express from "express";
+import cors from "cors";
+import { authRouter } from "./routes/auth.js";
+import { env } from "./config/env.js";
 import cookieParser from "cookie-parser";
+import { userRouter } from "./routes/user.js";
+import { connectDb, disconnectDb } from "./config/db.js";
+import { quizRouter } from "./routes/quiz.js";
+import { adminQuizRouter } from "./routes/admin-access/admin-quiz.js";
+import { setupSocket } from "./socket/index.js"
+import http from 'http'
 
-const app = express()
+const app = express();
+const server = http.createServer(app)
 
-app.use(cors({
-  origin: env.FRONTEND_URL,
-  credentials: true 
+setupSocket(server)
 
-}))
+app.use(
+  cors({
+    origin: env.FRONTEND_URL,
+    credentials: true,
+  })
+);
 
 app.use(cookieParser());
-app.use(express.json())
-app.use(express.urlencoded())
+app.use(express.json());
+app.use(express.urlencoded());
+app.use(express.static("public/uploads"));
+
+//routes
+app.use("/api/auth", authRouter);
+app.use("/api/user", userRouter);
+app.use("/api/quiz", quizRouter);
+app.use("/api/admin/quiz", adminQuizRouter);
 
 
+try {
+  await connectDb();
+  console.log("Mongo Connected!");
 
+  app.listen(4000, () => {
+    console.log("Server started on: http://localhost:4000/api");
+  });
+} catch (error) {
+  console.error("Failed to start server:", error);
+}
 
-app.use("/auth", authRouter)
+process.on("SIGINT", async () => {
+  await disconnectDb();
+});
 
-
-app.listen(4002, () => console.log("http://localhost:4002"))
+process.on("SIGTERM", async () => {
+  await disconnectDb();
+});

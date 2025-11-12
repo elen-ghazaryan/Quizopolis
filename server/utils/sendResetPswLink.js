@@ -16,11 +16,11 @@ export const sendResetPswLink = async (user) => {
 
     // Send email
     await transporter.sendMail({
-      from: `"QuizMaster" <${env.APP_EMAIL}>`,
+      from: `"Quizopolis" <${env.APP_EMAIL}>`,
       to: user.email,
       subject: "Reset your password",
       html: `
-        <h2>Hello, ${user.name}!</h2>
+        <h2>Hello, ${user.username}!</h2>
         <p>Click the link below to reset your password:</p>
         <a href="${resetLink}" style="
           display:inline-block;

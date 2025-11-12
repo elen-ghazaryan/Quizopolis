@@ -1,0 +1,169 @@
+import { User, QuizAttempt } from "../models/index.js"
+import bcrypt from 'bcrypt'
+import { calculateLongestStreak } from "../helpers/calcLongestStreak.js"
+
+class UserController {
+  async getCurrentUser (req, res) {
+    const {name, surname, email, username, role, isEmailVerified, avatar} = req.user
+    return res.send({ message:"Ok", payload: {name, surname, email, username, isEmailVerified, role, avatar } })
+  }
+
+  async updatePassword(req, res) {
+    const user = req.user
+    const { oldPassword, newPassword } = req.body || {}
+
+    if(!oldPassword?.trim() || !newPassword?.trim()) {
+      return res.status(400).send({ message: "Email, old password and new password are required!"})
+    }
+
+    const isMatch = await bcrypt.compare(oldPassword, user.password)
+    if(!isMatch) {
+      return res.status(400).send( { message: "Wrong user credentials" })
+    }
+
+    const hashed = await bcrypt.hash(newPassword, 10)
+    user.password = hashed
+    await user.save()
+    res.send({ message: "Password has been successfully changed" })
+
+  }
+
+  async updateUsername (req, res) {
+    const { newUsername } = req.body
+    if(!newUsername) return res.status(400).send({ message: "Send new username for updating"})
+    const user = req.user
+
+    const found = await User.findOne({ username: newUsername})
+    if(found) return res.status(400).send({ message: "Username is busy, pick other" })
+
+    user.username = newUsername
+    await user.save()
+    res.send({ message: "Username updated successfully "})
+  }
+
+  async uploadAvatar (req, res) {
+    const user = req.user
+    user.avatar = req.file.filename
+    await user.save()
+    res.send({ message: "Successfully updated", payload: { picture: req.file.filename}})
+  }
+
+  async updateProfile (req, res) {
+    const userId = req.user._id
+    const updates = req.body
+    const user = await User.findByIdAndUpdate(userId, updates, { new: true })
+    res.send({ message: "Ok", payload: { user }})
+  }
+
+  async getStreak (req, res) {
+    const user = req.user
+    const longestStreak = await calculateLongestStreak(user._id);
+    res.send({
+      currentStreak: user.currentStreak,
+      lastQuizDate: user.lastQuizDate,
+      longestStreak: longestStreak
+    });
+  }
+
+  async getStats (req, res) {
+    try {
+    const userId = req.user._id;
+
+    // Get all quiz attempts by the current user
+    const attempts = await QuizAttempt.find({ userId })
+      .populate("quizId", "category difficulty")
+      .sort({ createdAt: 1 });
+
+    // If the user has no attempts, return empty stats
+    if (!attempts.length) {
+      return res.json({
+        totalQuizzes: 0,
+        averageScore: 0,
+        bestScore: 0,
+        averageTime: 0,
+        totalTime: 0,
+        correctAnswers: 0,
+        totalQuestions:0,
+        accuracy: 0,
+        strongestCategory: null,
+        weakestCategory: null,
+        lastQuizDate: null,
+        quizzesThisMonth: 0,
+      });
+    }
+
+    // Basic score stats
+    const totalQuizzes = attempts.length;
+    const totalScore = attempts.reduce((sum, a) => sum + a.score, 0);
+    const averageScore = totalScore / totalQuizzes;
+    const bestScore = Math.max(...attempts.map((a) => a.score));
+
+    // Time stats
+    const totalTime = attempts.reduce((sum, a) => sum + (a.timeSpent || 0), 0);
+    const averageTime = totalTime / totalQuizzes;
+
+    //  Accuracy stats
+    let correctAnswers = 0;
+    let totalQuestions = 0;
+
+    for (const attempt of attempts) {
+      for (const answer of attempt.answers) {
+        totalQuestions++;
+        if (answer.isCorrect) correctAnswers++;
+      }
+    }
+    const accuracy = totalQuestions ? (correctAnswers / totalQuestions) * 100 : 0;
+
+    // Category performance
+    const categoryScores = {}; // { categoryName: [scores] }
+    for (const attempt of attempts) {
+      const category = attempt.quizId?.category || "Unknown";
+      if (!categoryScores[category]) categoryScores[category] = [];
+      categoryScores[category].push(attempt.score);
+    }
+
+    const categoryAverages = Object.entries(categoryScores).map(([cat, scores]) => {
+      const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+      return { category: cat, avg };
+    });
+
+    categoryAverages.sort((a, b) => a.avg - b.avg);
+    const weakestCategory = categoryAverages[0]?.category || null;
+    const strongestCategory = categoryAverages.at(-1)?.category || null;
+
+    // Last quiz date
+    const lastQuizDate = attempts.at(-1)?.completedAt || null;
+
+    // Quizzes taken this month
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const quizzesThisMonth = attempts.filter(
+      (a) => a.createdAt >= startOfMonth
+    ).length;
+
+    //why Final response
+    const statsResponse = {
+      totalQuizzes,
+      averageScore: Number(averageScore.toFixed(1)),
+      bestScore,
+      averageTime: Number(averageTime.toFixed(1)),
+      totalTime: Number(totalTime.toFixed(1)),
+      accuracy: Number(accuracy.toFixed(1)),
+      correctAnswers,
+      totalQuestions,
+      strongestCategory,
+      weakestCategory,
+      lastQuizDate,
+      quizzesThisMonth,
+    };
+
+    return res.json(statsResponse);
+  } catch (err) {
+    console.error("Error getting user stats:", err);
+    res.status(500).json({ message: "Failed to fetch user stats" });
+  }
+  }
+
+}
+
+export default new UserController()
