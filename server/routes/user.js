@@ -18,3 +18,7 @@ userRouter.put("/profile/", controller. updateProfile)
 
 userRouter.get("/streak", controller.getStreak)
 userRouter.get("/stats", controller.getStats)
+
+userRouter.post("/:id/favorites", controller.addFavorite)
+userRouter.delete("/:id/favorites/:quizId", controller.removeFavorite)
+userRouter.get("/:id/favorites", controller.getAllFavorites)

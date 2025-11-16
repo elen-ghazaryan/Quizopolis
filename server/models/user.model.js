@@ -1,4 +1,4 @@
-import {Schema, model} from "mongoose"
+import mongoose, {Schema, model} from "mongoose"
 import validator from "validator";
 
 const userSchema = new Schema({
@@ -33,7 +33,10 @@ const userSchema = new Schema({
 
   //streak
   currentStreak: { type: Number, default:0 },
-  lastQuizDate: Date
+  lastQuizDate: Date,
+
+  //favorite quizzes
+  favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: "Quiz"}]
 });
 
 export default model("User", userSchema);

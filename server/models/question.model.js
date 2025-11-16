@@ -23,7 +23,6 @@ const questionSchema = new Schema({
   correctAnswer: { type: String }, // for short-answer
   points: { type: Number, default: 1 },
   image: String,
-  explanation: String,
 });
 
 export default model("Question", questionSchema);

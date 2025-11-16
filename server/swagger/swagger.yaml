@@ -1,0 +1,2072 @@
+openapi: 3.0.3
+info:
+  title: Quizopolis API
+  description: Quizopolis API provides endpoints for user authentication, quiz creation,
+    quiz participation, and admin management. It supports user roles,
+    categorized quizzes, scoring logic, and real-time live quiz sessions.
+  version: 1.0.0
+servers:
+  - url: http://localhost:4000/api
+    description: Development server
+
+tags:
+  - name: Authentication
+    description: User authentication and verification endpoints
+  - name: User
+    description: User profile and statistics management
+  - name: Quiz
+    description: Quiz taking and interaction endpoints
+  - name: Admin - Quiz
+    description: Quiz creation and management (Teacher only)
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: token
+      description: JWT token stored in HTTP-only cookie
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Error message"
+        errors:
+          type: array
+          items:
+            type: string
+
+    User:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "507f1f77bcf86cd799439011"
+        username:
+          type: string
+          example: "johndoe"
+        email:
+          type: string
+          format: email
+          example: "john@example.com"
+        name:
+          type: string
+          example: "John"
+        surname:
+          type: string
+          example: "Doe"
+        role:
+          type: string
+          enum: [student, teacher]
+          example: "student"
+        isEmailVerified:
+          type: boolean
+          example: true
+        avatar:
+          type: string
+          example: "avatar-123456.jpg"
+        currentStreak:
+          type: number
+          example: 5
+        lastQuizDate:
+          type: string
+          format: date-time
+
+    Quiz:
+      type: object
+      properties:
+        _id:
+          type: string
+        title:
+          type: string
+          example: "JavaScript Basics"
+        description:
+          type: string
+          example: "Test your JavaScript knowledge"
+        category:
+          type: string
+          example: "programming"
+        difficulty:
+          type: string
+          enum: [easy, medium, hard]
+          example: "medium"
+        mode:
+          type: string
+          enum: [standard, live]
+          example: "standard"
+        isPublished:
+          type: boolean
+          example: true
+        isActive:
+          type: boolean
+          example: false
+        createdBy:
+          type: object
+          properties:
+            _id:
+              type: string
+            username:
+              type: string
+            avatar:
+              type: string
+        questions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Question'
+        createdAt:
+          type: string
+          format: date-time
+        accessCode:
+          type: string
+          example: "123456"
+
+    Question:
+      type: object
+      properties:
+        _id:
+          type: string
+        questionText:
+          type: string
+          example: "What is a closure in JavaScript?"
+        questionType:
+          type: string
+          enum: [multiple-choice, true-false, short-answer]
+          example: "multiple-choice"
+        options:
+          type: array
+          items:
+            type: object
+            properties:
+              text:
+                type: string
+              isCorrect:
+                type: boolean
+        correctAnswer:
+          type: string
+        points:
+          type: number
+          example: 10
+        image:
+          type: string
+        explanation:
+          type: string
+
+    QuizAttempt:
+      type: object
+      properties:
+        _id:
+          type: string
+        quizId:
+          type: string
+        userId:
+          type: string
+        status:
+          type: string
+          enum: [in_progress, completed]
+        score:
+          type: number
+        percentage:
+          type: number
+        totalPoints:
+          type: number
+        timeSpent:
+          type: number
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+        answers:
+          type: array
+          items:
+            type: object
+
+    Comment:
+      type: object
+      properties:
+        _id:
+          type: string
+        quizId:
+          type: string
+        userId:
+          type: object
+          properties:
+            _id:
+              type: string
+            username:
+              type: string
+            avatar:
+              type: string
+        text:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+paths:
+  # ==================== AUTHENTICATION ====================
+  /auth/signup:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user
+      description: Create a new user account. Email verification required after signup.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - email
+                - password
+              properties:
+                username:
+                  type: string
+                  example: "johndoe"
+                email:
+                  type: string
+                  format: email
+                  example: "john@example.com"
+                password:
+                  type: string
+                  format: password
+                  example: "SecurePass123!"
+                  description: "Must contain min 8 chars, one uppercase, one lowercase, one number, one special char"
+                role:
+                  type: string
+                  enum: [student, teacher]
+                  default: student
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "You've signed up successfully. Now please verify your email to continue"
+        '400':
+          description: Validation error or user already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Login user
+      description: Authenticate user and receive JWT token in cookie
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "john@example.com"
+                password:
+                  type: string
+                  format: password
+                  example: "SecurePass123!"
+      responses:
+        '200':
+          description: Login successful
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                example: token=abcdef123456; Path=/; HttpOnly; Secure; SameSite=Strict
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Login successful"
+        '401':
+          description: Invalid credentials or email not verified
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: Logout user
+      description: Clear authentication cookie
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Logged out successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Logged out successfully"
+
+  /auth/verify:
+    post:
+      tags:
+        - Authentication
+      summary: Verify email address
+      description: Verify user email with token sent to email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+              properties:
+                token:
+                  type: string
+                  example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      responses:
+        '200':
+          description: Email verified successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Email successfully verified and logged in"
+        '400':
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/verify/resend:
+    post:
+      tags:
+        - Authentication
+      summary: Resend verification email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "john@example.com"
+      responses:
+        '200':
+          description: Verification email resent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Verification email resent to john@example.com"
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/forgot-password:
+    post:
+      tags:
+        - Authentication
+      summary: Request password reset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "john@example.com"
+      responses:
+        '200':
+          description: Reset link sent (if email exists)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "A reset link has been sent"
+
+  /auth/reset-password:
+    post:
+      tags:
+        - Authentication
+      summary: Reset password with token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+                - newPassword
+              properties:
+                token:
+                  type: string
+                  example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                newPassword:
+                  type: string
+                  format: password
+                  example: "NewSecurePass123!"
+      responses:
+        '200':
+          description: Password reset successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Password successfully reset"
+        '400':
+          description: Invalid token or password requirements not met
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ==================== USER ====================
+  /user/profile:
+    get:
+      tags:
+        - User
+      summary: Get current user profile
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: User profile retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Ok"
+                  payload:
+                    $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags:
+        - User
+      summary: Update user profile
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                surname:
+                  type: string
+      responses:
+        '200':
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Ok"
+                  payload:
+                    type: object
+                    properties:
+                      user:
+                        $ref: '#/components/schemas/User'
+
+  /user/password:
+    patch:
+      tags:
+        - User
+      summary: Update password
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - oldPassword
+                - newPassword
+              properties:
+                oldPassword:
+                  type: string
+                  format: password
+                newPassword:
+                  type: string
+                  format: password
+      responses:
+        '200':
+          description: Password updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Password has been successfully changed"
+        '400':
+          description: Wrong credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /user/username:
+    patch:
+      tags:
+        - User
+      summary: Update username
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - newUsername
+              properties:
+                newUsername:
+                  type: string
+                  example: "newusername123"
+      responses:
+        '200':
+          description: Username updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Username updated successfully"
+        '400':
+          description: Username already taken
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /user/avatar:
+    post:
+      tags:
+        - User
+      summary: Upload user avatar
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - avatar
+              properties:
+                avatar:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Avatar uploaded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Successfully updated"
+                  payload:
+                    type: object
+                    properties:
+                      picture:
+                        type: string
+                        example: "avatar-123456.jpg"
+
+  /user/streak:
+    get:
+      tags:
+        - User
+      summary: Get user streak information
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Streak data retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  currentStreak:
+                    type: number
+                    example: 5
+                  lastQuizDate:
+                    type: string
+                    format: date-time
+                  longestStreak:
+                    type: number
+                    example: 12
+
+  /user/stats:
+    get:
+      tags:
+        - User
+      summary: Get user statistics
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: User statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalQuizzes:
+                    type: number
+                    example: 25
+                  averageScore:
+                    type: number
+                    example: 85.5
+                  bestScore:
+                    type: number
+                    example: 100
+                  averageTime:
+                    type: number
+                    example: 180.5
+                  totalTime:
+                    type: number
+                    example: 4512.5
+                  accuracy:
+                    type: number
+                    example: 87.3
+                  correctAnswers:
+                    type: number
+                    example: 218
+                  totalQuestions:
+                    type: number
+                    example: 250
+                  strongestCategory:
+                    type: string
+                    example: "programming"
+                  weakestCategory:
+                    type: string
+                    example: "history"
+                  lastQuizDate:
+                    type: string
+                    format: date-time
+                  quizzesThisMonth:
+                    type: number
+                    example: 8
+
+  /user/{id}/favorites:
+    post:
+      tags:
+        - User
+      summary: Add quiz to favorites
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: User ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - quizId
+              properties:
+                quizId:
+                  type: string
+                  example: "507f1f77bcf86cd799439011"
+      responses:
+        '200':
+          description: Quiz added to favorites
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Quiz added to favorites"
+                  payload:
+                    type: object
+                    properties:
+                      favorites:
+                        type: array
+                        items:
+                          type: string
+
+    get:
+      tags:
+        - User
+      summary: Get all favorite quizzes
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: User ID
+      responses:
+        '200':
+          description: Favorites retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  favorites:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Quiz'
+
+  /user/{id}/favorites/{quizId}:
+    delete:
+      tags:
+        - User
+      summary: Remove quiz from favorites
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: User ID
+        - name: quizId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Quiz ID
+      responses:
+        '200':
+          description: Quiz removed from favorites
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Quiz removed from favorites"
+                  payload:
+                    type: object
+                    properties:
+                      favorites:
+                        type: array
+                        items:
+                          type: string
+
+  # ==================== QUIZ ====================
+  /quiz:
+    get:
+      tags:
+        - Quiz
+      summary: Get all published standard quizzes
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: All published quizzes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "All published standard quizzes"
+                  payload:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        _id:
+                          type: string
+                        title:
+                          type: string
+                        description:
+                          type: string
+                        category:
+                          type: string
+                        difficulty:
+                          type: string
+                        createdBy:
+                          type: object
+                        questionCount:
+                          type: number
+                        createdAt:
+                          type: string
+
+  /quiz/history/standard:
+    get:
+      tags:
+        - Quiz
+      summary: Get user's standard quiz history
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Quiz history retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  payload:
+                    type: object
+                    properties:
+                      history:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/QuizAttempt'
+
+  /quiz/history/live:
+    get:
+      tags:
+        - Quiz
+      summary: Get user's live quiz history
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Live quiz history retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  payload:
+                    type: object
+                    properties:
+                      history:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/QuizAttempt'
+
+  /quiz/{id}:
+    get:
+      tags:
+        - Quiz
+      summary: Get quiz by ID
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Quiz ID
+      responses:
+        '200':
+          description: Quiz retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  payload:
+                    type: object
+                    properties:
+                      quiz:
+                        $ref: '#/components/schemas/Quiz'
+        '404':
+          description: Quiz not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /quiz/comments:
+    post:
+      tags:
+        - Quiz
+      summary: Add comment to quiz
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - text
+              properties:
+                text:
+                  type: string
+                  example: "Great quiz!"
+      responses:
+        '201':
+          description: Comment added
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  payload:
+                    type: object
+                    properties:
+                      comment:
+                        $ref: '#/components/schemas/Comment'
+
+  /quiz/{quizId}/comments:
+    get:
+      tags:
+        - Quiz
+      summary: Get all comments for a quiz
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: quizId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Comments retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  payload:
+                    type: object
+                    properties:
+                      comments:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Comment'
+
+  /quiz/{quizId}/comments/{commentId}:
+    patch:
+      tags:
+        - Quiz
+      summary: Update comment
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: quizId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: commentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - text
+              properties:
+                text:
+                  type: string
+      responses:
+        '200':
+          description: Comment updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  payload:
+                    type: object
+                    properties:
+                      comment:
+                        $ref: '#/components/schemas/Comment'
+        '403':
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags:
+        - Quiz
+      summary: Delete comment
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: quizId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: commentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Comment deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  payload:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+
+  /quiz/{id}/take:
+    get:
+      tags:
+        - Quiz
+      summary: Start quiz attempt
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Quiz ID
+      responses:
+        '201':
+          description: Quiz attempt started
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  payload:
+                    type: object
+                    properties:
+                      attempt:
+                        type: object
+                        properties:
+                          attemptId:
+                            type: string
+                          quizId:
+                            type: string
+                          startedAt:
+                            type: string
+                          totalPoints:
+                            type: number
+                      questions:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Question'
+        '400':
+          description: Already have an in-progress attempt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /quiz/attempt/{attemptId}/answer:
+    post:
+      tags:
+        - Quiz
+      summary: Save draft answer
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: attemptId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - questionId
+              properties:
+                questionId:
+                  type: string
+                selectedOptions:
+                  type: array
+                  items:
+                    type: number
+                textAnswer:
+                  type: string
+      responses:
+        '200':
+          description: Answer saved as draft
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  questionId:
+                    type: string
+                  totalAnswered:
+                    type: number
+
+  /quiz/attempt/{attemptId}/submit:
+    post:
+      tags:
+        - Quiz
+      summary: Submit quiz attempt
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: attemptId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Quiz submitted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  payload:
+                    type: object
+                    properties:
+                      score:
+                        type: number
+                      totalPoints:
+                        type: number
+                      percentage:
+                        type: number
+                      timeSpent:
+                        type: number
+                      correctAnswers:
+                        type: number
+                      totalQuestions:
+                        type: number
+        '404':
+          description: Attempt not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /quiz/attempt/{attemptId}/resume:
+    get:
+      tags:
+        - Quiz
+      summary: Resume quiz attempt
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: attemptId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Quiz resumed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  attempt:
+                    type: object
+                  draftAnswers:
+                    type: object
+                  questions:
+                    type: array
+
+  /quiz/{quizId}/restart:
+    post:
+      tags:
+        - Quiz
+      summary: Restart quiz attempt
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: quizId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          description: Quiz restarted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  attemptId:
+                    type: string
+                  questions:
+                    type: array
+
+  /quiz/{id}/live/start:
+    post:
+      tags:
+        - Quiz
+      summary: Start live quiz session (Teacher only)
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Live quiz lobby opened
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  payload:
+                    type: object
+                    properties:
+                      quiz:
+                        type: object
+                        properties:
+                          _id:
+                            type: string
+                          title:
+                            type: string
+                          accessCode:
+                            type: string
+                          isActive:
+                            type: boolean
+                          totalQuestions:
+                            type: number
+        '403':
+          description: Unauthorized - Teacher only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /quiz/{id}/live/join:
+    post:
+      tags:
+        - Quiz
+      summary: Join live quiz session
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - accessCode
+              properties:
+                accessCode:
+                  type: string
+                  example: "123456"
+      responses:
+        '200':
+          description: Successfully joined quiz
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  quiz:
+                    type: object
+        '400':
+          description: Quiz already started or not active
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ==================== ADMIN - QUIZ ====================
+  /admin/quiz:
+    post:
+      tags:
+        - Admin - Quiz
+      summary: Create a new quiz (Teacher only)
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - category
+                - difficulty
+              properties:
+                title:
+                  type: string
+                  example: "Advanced JavaScript"
+                description:
+                  type: string
+                  example: "Test your advanced JS knowledge"
+                category:
+                  type: string
+                  example: "programming"
+                difficulty:
+                  type: string
+                  enum: [easy, medium, hard]
+                  example: "hard"
+                mode:
+                  type: string
+                  enum: [standard, live]
+                  default: standard
+                isPublished:
+                  type: boolean
+                  default: false
+      responses:
+        '201':
+          description: Quiz created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Standard quiz created successfully."
+                  payload:
+                    type: object
+                    properties:
+                      quiz:
+                        $ref: '#/components/schemas/Quiz'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - Teacher role required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/quiz/published:
+    get:
+      tags:
+        - Admin - Quiz
+      summary: Get own published quizzes (Teacher only)
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: All published quizzes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  payload:
+                    type: object
+                    properties:
+                      quizzes:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Quiz'
+
+  /admin/quiz/unpublished:
+    get:
+      tags:
+        - Admin - Quiz
+      summary: Get own draft quizzes (Teacher only)
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: All unpublished quizzes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  payload:
+                    type: object
+                    properties:
+                      quizzes:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Quiz'
+
+  /admin/quiz/{id}:
+    get:
+      tags:
+        - Admin - Quiz
+      summary: Get quiz by ID (admin view)
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Quiz ID
+      responses:
+        '200':
+          description: Quiz retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  payload:
+                    type: object
+                    properties:
+                      quiz:
+                        $ref: '#/components/schemas/Quiz'
+        '403':
+          description: Not authorized to view this quiz
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Quiz not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags:
+        - Admin - Quiz
+      summary: Update quiz
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                category:
+                  type: string
+                difficulty:
+                  type: string
+                  enum: [easy, medium, hard]
+                isPublished:
+                  type: boolean
+                mode:
+                  type: string
+                  enum: [standard, live]
+                accessCode:
+                  type: string
+      responses:
+        '200':
+          description: Quiz updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  payload:
+                    type: object
+                    properties:
+                      quiz:
+                        $ref: '#/components/schemas/Quiz'
+        '403':
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags:
+        - Admin - Quiz
+      summary: Delete quiz
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Quiz deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Ok, deleted"
+                  payload:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+        '403':
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Quiz not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/quiz/{id}/stats:
+    get:
+      tags:
+        - Admin - Quiz
+      summary: Get quiz statistics
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Quiz stats retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  stats:
+                    type: object
+                    properties:
+                      totalAttempts:
+                        type: number
+                        example: 50
+                      scoreRanges:
+                        type: object
+                        properties:
+                          0-49%:
+                            type: number
+                          50-69%:
+                            type: number
+                          70-89%:
+                            type: number
+                          90-100%:
+                            type: number
+                      averageScore:
+                        type: number
+                        example: 75.5
+                      highestScore:
+                        type: number
+                        example: 98.5
+                      activeParticipants:
+                        type: array
+                        items:
+                          type: object
+
+  /admin/quiz/{id}/participants:
+    get:
+      tags:
+        - Admin - Quiz
+      summary: Search quiz participants (live quiz only)
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search by username or email
+      responses:
+        '200':
+          description: Participants retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  participants:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        _id:
+                          type: string
+                        username:
+                          type: string
+                        email:
+                          type: string
+        '400':
+          description: Not a live quiz
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/quiz/{id}/publish:
+    patch:
+      tags:
+        - Admin - Quiz
+      summary: Publish quiz
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Quiz published
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Quiz is published"
+        '403':
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/quiz/{id}/unpublish:
+    patch:
+      tags:
+        - Admin - Quiz
+      summary: Unpublish quiz
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Quiz unpublished
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Quiz is unpublished. Check your draft."
+        '403':
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ==================== QUESTIONS ====================
+  /admin/quiz/{quizId}/questions:
+    post:
+      tags:
+        - Admin - Quiz
+      summary: Add question to quiz
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: quizId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - questionText
+                - questionType
+              properties:
+                questionText:
+                  type: string
+                  example: "What is a closure?"
+                questionType:
+                  type: string
+                  enum: [multiple-choice, true-false, short-answer]
+                  example: "multiple-choice"
+                options:
+                  type: string
+                  description: JSON string of options array
+                  example: '[{"text":"Option 1","isCorrect":true},{"text":"Option 2","isCorrect":false}]'
+                correctAnswer:
+                  type: string
+                  example: "For true-false or short-answer"
+                points:
+                  type: number
+                  default: 1
+                  example: 10
+                explanation:
+                  type: string
+                  example: "Explanation of the answer"
+                image:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Question added
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  payload:
+                    $ref: '#/components/schemas/Question'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      tags:
+        - Admin - Quiz
+      summary: Get all questions for a quiz
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: quizId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Questions retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  payload:
+                    type: object
+                    properties:
+                      questions:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Question'
+
+  /admin/quiz/questions/{questionId}:
+    get:
+      tags:
+        - Admin - Quiz
+      summary: Get question by ID
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: questionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Question retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  payload:
+                    type: object
+                    properties:
+                      question:
+                        $ref: '#/components/schemas/Question'
+        '404':
+          description: Question not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags:
+        - Admin - Quiz
+      summary: Update question
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: questionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                questionText:
+                  type: string
+                questionType:
+                  type: string
+                  enum: [multiple-choice, true-false, short-answer]
+                options:
+                  type: string
+                  description: JSON string of options array
+                correctAnswer:
+                  type: string
+                points:
+                  type: number
+                explanation:
+                  type: string
+                image:
+                  type: string
+                  format: binary
+                removeImage:
+                  type: boolean
+                  description: Set to true to remove existing image
+      responses:
+        '200':
+          description: Question updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  question:
+                    $ref: '#/components/schemas/Question'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags:
+        - Admin - Quiz
+      summary: Delete question
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: questionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Question deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  payload:
+                    type: object
+                    properties:
+                      questions:
+                        type: array
+                        items:
+                          type: string
+        '403':
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Question not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+

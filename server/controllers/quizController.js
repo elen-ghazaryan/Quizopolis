@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { Quiz, Comment, QuizAttempt } from "../models/index.js";
+import { Quiz, Comment, QuizAttempt, User } from "../models/index.js";
 import redis from "../config/redis.js";
 
 class QuizController {
@@ -8,7 +8,7 @@ class QuizController {
       const quizzes = await Quiz.find({
         isPublished: true,
         mode: "standard",
-      }).populate("createdBy", "username");
+      }).populate("createdBy", "username avatar");
 
       const payload = quizzes.map((quiz) => ({
         _id: quiz._id,
@@ -18,6 +18,7 @@ class QuizController {
         difficulty: quiz.difficulty,
         createdBy: quiz.createdBy,
         questionCount: quiz.questions.length,
+        createdAt: quiz.createdAt
       }));
 
       res
@@ -39,7 +40,7 @@ class QuizController {
           path: "quizId",
           match: { mode: "standard" }, // Only standard quizzes
           select: "title description createdBy category difficulty",
-          populate: { path: "createdBy", select: "username" },
+          populate: { path: "createdBy", select: "username avatar" },
         })
         .exec();
 
@@ -76,8 +77,8 @@ class QuizController {
           match: { mode: "live" }, // Only live quizzes
           select: "title participants createdBy category difficulty",
           populate: [
-            { path: "participants", select: "username" },
-            { path: "createdBy", select: "username" },
+            { path: "participants", select: "username avatar" },
+            { path: "createdBy", select: "username avatar" },
           ],
         })
         .exec();
@@ -113,10 +114,10 @@ class QuizController {
 
     try {
       const quiz = await Quiz.findById(quizId)
-        .populate("createdBy", "username")
+        .populate("createdBy", "username avatar")
         .populate({
           path: "comments",
-          populate: { path: "userId", select: "username" },
+          populate: { path: "userId", select: "username avatar" },
         })
         .populate({
           path: "questions",
@@ -168,7 +169,7 @@ class QuizController {
         userId,
         text: textValue,
       });
-      await comment.populate("userId", "username");
+      await comment.populate("userId", "username avatar");
 
       res.status(201).send({ message: "Comment added", payload: { comment } });
     } catch (err) {
@@ -182,7 +183,7 @@ class QuizController {
 
     try {
       const comments = await Comment.find({ quizId })
-        .populate("userId", "username")
+        .populate("userId", "username avatar")
         .sort({ createdAt: -1 }); // newest first
 
       res.status(200).send({
@@ -219,7 +220,7 @@ class QuizController {
 
       comment.text = textValue;
       await comment.save();
-      await comment.populate("userId", "username");
+      await comment.populate("userId", "username avatar");
 
       res
         .status(200)
@@ -272,7 +273,7 @@ class QuizController {
           path: "questions",
           select: "questionText questionType points image options",
         })
-        .populate("createdBy", "username");
+        .populate("createdBy", "username avatar");
 
       if (!quiz) return res.status(404).send({ message: "Quiz not found" });
 
@@ -471,6 +472,21 @@ class QuizController {
         await attempt.save();
         await redis.del(redisKey);
 
+        // handle daily streak
+        const user = await User.findById(userId)
+        const today = new Date()
+        const lastQuizDate = new Date(user.lastQuizDate)
+
+        const diffDays = Math.floor((today-lastQuizDate) / (1000 * 60 * 60 * 24))
+        if(diffDays === 1) {
+          user.currentStreak = (user.currentStreak || 0) + 1 
+        } else if(diffDays > 1) {
+          user.currentStreak = 1 //start again
+        }
+
+        user.lastQuizDate = today;
+        await user.save()
+
         res.status(200).json({
           message: "Quiz submitted successfully",
           payload: {
@@ -547,11 +563,10 @@ class QuizController {
         await redis.del(redisKey);
       }
 
-      const quiz = await Quiz.findById(quizId)
-        .populate({
-          path: "questions",
-          select: "-correctAnswer -options.isCorrect"
-        });
+      const quiz = await Quiz.findById(quizId).populate({
+        path: "questions",
+        select: "-correctAnswer -options.isCorrect",
+      });
       const totalPoints = quiz.questions.reduce((sum, q) => sum + q.points, 0);
 
       const attempt = await QuizAttempt.create({
@@ -576,6 +591,117 @@ class QuizController {
       res.status(500).json({ message: "Internal server error" });
     }
   }
+
+  async startLiveSession(req, res) {
+    const { id: quizId } = req.params;
+    const userId = req.user._id;
+
+    try {
+      const quiz = await Quiz.findById(quizId);
+
+      if (!quiz) return res.status(404).json({ message: "Quiz not found" });
+
+      if (quiz.createdBy.toString() !== userId.toString()) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      if (quiz.mode !== "live") {
+        return res.status(400).json({ message: "Quiz is not in live mode" });
+      }
+      if (quiz.isActive && quiz.quizStarted) {
+        return res.status(400).json({ message: "Quiz is already running" });
+      }
+      if (quiz.questions.length === 0) {
+        return res
+          .status(400)
+          .json({ message: "Add questions before starting" });
+      }
+
+      quiz.accessCode = Math.floor(100000 + Math.random() * 900000).toString();
+      quiz.isActive = true;
+      quiz.startTime = new Date();
+      await quiz.save();
+
+       res.status(200).json({
+        message: "Live quiz lobby opened",
+        payload: {
+          quiz: {
+          _id: quiz._id,
+          title: quiz.title,
+          accessCode: quiz.accessCode,
+          isActive: quiz.isActive,
+          totalQuestions: quiz.questions.length,
+      },
+        }
+      });
+    } catch (err) {
+      console.error("Failed to start live session:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  }
+
+  async joinLiveQuiz(req, res) {
+    const { accessCode } = req.body;
+    const userId = req.user._id;
+    const quizId = req.params.id
+
+    try {
+      const quiz = await Quiz.findOne({ _id: quizId, accessCode, mode: "live" });
+
+      if (!quiz) {
+        return res
+          .status(404)
+          .json({ message: "Quiz not found with this access code" });
+      }
+
+      if (!quiz.isActive) {
+        return res.status(400).json({ message: "Quiz session is not active" });
+      }
+
+      // can't join if quiz already started
+      const stateKey = `live:${quizId}:state`;
+      const data = await redis.get(stateKey);
+      const quizState =  data ? JSON.parse(data) : null;
+
+      if (quizState && quizState.quizStarted) {
+        return res.status(400).json({
+          message: "Quiz already started. You cannot join now.",
+        });
+      }
+
+      if (quiz.participants.includes(userId)) {
+        return res.status(200).json({
+          message: "Already joined",
+          quiz: {
+            _id: quiz._id,
+            title: quiz.title,
+            description: quiz.description,
+            totalQuestions: quiz.questions.length,
+            quizStarted: quiz.quizStarted,
+          },
+        });
+      }
+
+      // Add to participants
+      quiz.participants.push(userId);
+      await quiz.save();
+
+      res.status(200).json({
+        message: "Successfully joined quiz",
+        quiz: {
+          _id: quiz._id,
+          title: quiz.title,
+          description: quiz.description,
+          totalQuestions: quiz.questions.length,
+          quizStarted: quiz.quizStarted,
+        },
+      });
+    } catch (err) {
+      console.error("Failed to join live quiz:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  }
+
 }
 
 export default new QuizController();

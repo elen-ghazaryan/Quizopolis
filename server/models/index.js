@@ -3,11 +3,13 @@ import Quiz from './quiz.model.js';
 import Question from './question.model.js';
 import QuizAttempt from './quizAttempt.model.js';
 import Comment from './comments.model.js';
+import ChatMessage from './chatMessage.model.js';
 
 export {
   User,
   Quiz,
   Question,
   QuizAttempt,
-  Comment
+  Comment,
+  ChatMessage
 };

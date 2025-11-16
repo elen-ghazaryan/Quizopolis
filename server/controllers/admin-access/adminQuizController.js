@@ -12,7 +12,6 @@ class AdminQuizController {
         category,
         difficulty,
         mode = "standard",
-        accessCode,
         isPublished = false,
       } = req.body || {};
 
@@ -39,20 +38,6 @@ class AdminQuizController {
         });
       }
 
-      // ---------- Mode-Specific Validations ----------
-      if (mode === "live") {
-        // For live quizzes, accessCode is required
-        if (!accessCode) {
-          return res
-            .status(400)
-            .send({ message: "Access code is required for live quizzes." });
-        }
-      }
-
-      let startTime = null,
-        endTime = null;
-      let isActive = false;
-
       // ---------- Create Quiz ----------
       const quizData = {
         title,
@@ -62,48 +47,20 @@ class AdminQuizController {
         difficulty,
         mode,
         isPublished,
-        accessCode: accessCode.toString() || null,
         questions: [],
-        startTime,
-        endTime,
-        isActive,
       };
 
-      const quiz = await Quiz.create(quizData);
-
-      let payload = {};
-      if (mode === "live") {
-        payload = {
-          _id: quiz._id,
-          title: quiz.title,
-          description: quiz.description,
-          category: quiz.category,
-          difficulty: quiz.difficulty,
-          accessCode: quiz.accessCode,
-          startTime: quiz.startTime,
-          endTime: quiz.endTime,
-          isActive: quiz.isActive,
-          mode: quiz.mode,
-          createdBy: quiz.createdBy,
-        };
-      } else {
-        // standard quiz
-        payload = {
-          _id: quiz._id,
-          title: quiz.title,
-          description: quiz.description,
-          category: quiz.category,
-          difficulty: quiz.difficulty,
-          mode: quiz.mode,
-          createdBy: quiz.createdBy,
-        };
+      if(mode === "live") {
+        quizData.participants = []
+        quizData.isActive = false
       }
+      const quiz = await Quiz.create(quizData);
 
       res.status(201).json({
         message: `${
           mode === "live" ? "Live" : "Standard"
         } quiz created successfully.`,
-        quiz: payload,
+        payload: {quiz},
       });
     } catch (err) {
       console.error("Failed to create quiz: " + err);

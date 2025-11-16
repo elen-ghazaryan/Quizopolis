@@ -164,6 +164,62 @@ class UserController {
   }
   }
 
+  async addFavorite(req, res) {
+    const userId = req.params.id;
+    const { quizId } = req.body;
+
+    try {
+      const user = await User.findById(userId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      if (!user.favorites.includes(quizId)) {
+        user.favorites.push(quizId);
+        await user.save();
+      }
+
+      res.status(200).json({ message: "Quiz added to favorites", payload: {favorites: user.favorites} });
+    } catch (err) {
+      console.error("Add favorite error:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  }
+
+  async removeFavorite(req, res) {
+    const userId = req.params.id;
+    const { quizId } = req.params;
+
+    try {
+      const user = await User.findById(userId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      user.favorites = user.favorites.filter(fav => fav.toString() !== quizId);
+      await user.save();
+
+      res.status(200).json({ message: "Quiz removed from favorites", payload: { favorites: user.favorites }});
+    } catch (err) {
+      console.error("Remove favorite error:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  }
+
+  async getAllFavorites(req, res) {
+    const userId = req.params.id;
+
+    try {
+      const user = await User.findById(userId).populate({
+        path: "favorites",
+        match: { mode: "standard" },
+        select: "_id title description difficulty category points createdAt" 
+      });
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      res.status(200).json({ favorites: user.favorites });
+    } catch (err) {
+      console.error("Get favorites error:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  }
+
 }
 
 export default new UserController()

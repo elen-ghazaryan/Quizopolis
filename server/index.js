@@ -9,11 +9,16 @@ import { quizRouter } from "./routes/quiz.js";
 import { adminQuizRouter } from "./routes/admin-access/admin-quiz.js";
 import { setupSocket } from "./socket/index.js"
 import http from 'http'
+import swaggerUi from 'swagger-ui-express';
+import YAML from 'yamljs'
 
 const app = express();
 const server = http.createServer(app)
 
 setupSocket(server)
+
+const swaggerDocument = YAML.load("./swagger/swagger.yaml")
+app.use('/api', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 app.use(
   cors({

@@ -1,7 +1,6 @@
 import { Server } from "socket.io"
 import quizHanlders from "./quizHandlers.js"
-import { env } from "../config/env"
-import { disconnect } from "mongoose";
+import { env } from "../config/env.js"
 
 export const setupSocket = (server) => {
   const io = new Server(server, {

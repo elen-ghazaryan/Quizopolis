@@ -2,6 +2,7 @@ import express from "express"
 import { isAuthenticated } from "../middlewares/isAuthenticated.js"
 import controller from "../controllers/quizController.js"
 import { isEmailVerified } from "../middlewares/isEmailVerified.js"
+import { authorize } from "../middlewares/authorize.js"
 export const quizRouter = express.Router()
 
 quizRouter.use(isAuthenticated)
@@ -26,3 +27,6 @@ quizRouter.get("/attempt/:attemptId/resume", controller.resumeQuiz)
 quizRouter.post("/:quizId/restart", controller.restartQuizAttempt)
 
 
+//take live quiz
+quizRouter.post("/:id/live/start", authorize(['teacher']), controller.startLiveSession);
+quizRouter.post("/:id/live/join", authorize(['teacher']), controller.joinLiveQuiz);
