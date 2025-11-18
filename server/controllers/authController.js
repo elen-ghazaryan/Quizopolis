@@ -52,8 +52,9 @@ class AuthController {
   }
 
   async login (req, res) {
-    const { email, password } = req.body
-    const user = await User.findOne({ email })
+    const { username, password } = req.body
+    if(!username || !password) return res.status(400).send({ message: "Username and password are required "})
+    const user = await User.findOne({ username })
     if(!user) return res.status(401).send({ message: "User not found" })
 
     const isMatch = await bcrypt.compare(password, user.password)

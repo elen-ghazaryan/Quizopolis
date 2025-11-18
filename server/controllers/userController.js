@@ -4,8 +4,8 @@ import { calculateLongestStreak } from "../helpers/calcLongestStreak.js"
 
 class UserController {
   async getCurrentUser (req, res) {
-    const {name, surname, email, username, role, isEmailVerified, avatar} = req.user
-    return res.send({ message:"Ok", payload: {name, surname, email, username, isEmailVerified, role, avatar } })
+    const { _id, email, username, role, isEmailVerified, avatar} = req.user
+    return res.send({ message:"Ok", payload: { id: _id, email, username, isEmailVerified, role, avatar } })
   }
 
   async updatePassword(req, res) {

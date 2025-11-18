@@ -17,7 +17,7 @@ quizRouter.get("/:id", controller.getQuizById)
 quizRouter.post("/comments", controller.addComment)
 quizRouter.get("/:quizId/comments", controller.getAllComments)
 quizRouter.patch("/:quizId/comments/:commentId", controller.updateComment)
-quizRouter.delete(":quizId/comments/:commentId", controller.deleteComment)
+quizRouter.delete("/:quizId/comments/:commentId", controller.deleteComment)
 
 //take standard quiz
 quizRouter.get("/:id/take", controller.startQuizAttempt)

@@ -17,9 +17,6 @@ const server = http.createServer(app)
 
 setupSocket(server)
 
-const swaggerDocument = YAML.load("./swagger/swagger.yaml")
-app.use('/api', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
-
 app.use(
   cors({
     origin: env.FRONTEND_URL,
@@ -39,21 +36,55 @@ app.use("/api/quiz", quizRouter);
 app.use("/api/admin/quiz", adminQuizRouter);
 
 
+const swaggerDocument = YAML.load("./swagger/swagger.yaml")
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+
 try {
   await connectDb();
   console.log("Mongo Connected!");
 
-  app.listen(4000, () => {
-    console.log("Server started on: http://localhost:4000/api");
+  server.on('error', (error) => {
+    if (error.code === 'EADDRINUSE') {
+      console.error(`Port 4000 is already in use`);
+    } else {
+      console.error("Server error:", error);
+    }
+    process.exit(1);
+  });
+
+  server.listen(4000, () => {
+    console.log("Server started on: http://localhost:4000/api/docs");
   });
 } catch (error) {
   console.error("Failed to start server:", error);
 }
 
 process.on("SIGINT", async () => {
-  await disconnectDb();
+  console.log("Closing gracefully...");
+
+  try {
+    await disconnectDb();
+  } catch (e) {
+    console.error("DB disconnect error:", e);
+  }
+
+  server.close(() => {
+    console.log("HTTP server closed");
+    process.exit(0);
+  });
 });
 
 process.on("SIGTERM", async () => {
-  await disconnectDb();
+  console.log("Closing gracefully...");
+
+  try {
+    await disconnectDb();
+  } catch (e) {
+    console.error("DB disconnect error:", e);
+  }
+
+  server.close(() => {
+    console.log("HTTP server closed");
+    process.exit(0);
+  });
 });

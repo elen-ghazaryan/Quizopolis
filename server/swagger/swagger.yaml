@@ -1,250 +1,39 @@
-openapi: 3.0.3
+openapi: 3.0.0
 info:
-  title: Quizopolis API
-  description: Quizopolis API provides endpoints for user authentication, quiz creation,
-    quiz participation, and admin management. It supports user roles,
-    categorized quizzes, scoring logic, and real-time live quiz sessions.
+  title: Quiz Application API
   version: 1.0.0
+  description: API documentation for Quiz Application
+
 servers:
   - url: http://localhost:4000/api
     description: Development server
 
-tags:
-  - name: Authentication
-    description: User authentication and verification endpoints
-  - name: User
-    description: User profile and statistics management
-  - name: Quiz
-    description: Quiz taking and interaction endpoints
-  - name: Admin - Quiz
-    description: Quiz creation and management (Teacher only)
-
-components:
-  securitySchemes:
-    cookieAuth:
-      type: apiKey
-      in: cookie
-      name: token
-      description: JWT token stored in HTTP-only cookie
-
-  schemas:
-    Error:
-      type: object
-      properties:
-        message:
-          type: string
-          example: "Error message"
-        errors:
-          type: array
-          items:
-            type: string
-
-    User:
-      type: object
-      properties:
-        _id:
-          type: string
-          example: "507f1f77bcf86cd799439011"
-        username:
-          type: string
-          example: "johndoe"
-        email:
-          type: string
-          format: email
-          example: "john@example.com"
-        name:
-          type: string
-          example: "John"
-        surname:
-          type: string
-          example: "Doe"
-        role:
-          type: string
-          enum: [student, teacher]
-          example: "student"
-        isEmailVerified:
-          type: boolean
-          example: true
-        avatar:
-          type: string
-          example: "avatar-123456.jpg"
-        currentStreak:
-          type: number
-          example: 5
-        lastQuizDate:
-          type: string
-          format: date-time
-
-    Quiz:
-      type: object
-      properties:
-        _id:
-          type: string
-        title:
-          type: string
-          example: "JavaScript Basics"
-        description:
-          type: string
-          example: "Test your JavaScript knowledge"
-        category:
-          type: string
-          example: "programming"
-        difficulty:
-          type: string
-          enum: [easy, medium, hard]
-          example: "medium"
-        mode:
-          type: string
-          enum: [standard, live]
-          example: "standard"
-        isPublished:
-          type: boolean
-          example: true
-        isActive:
-          type: boolean
-          example: false
-        createdBy:
-          type: object
-          properties:
-            _id:
-              type: string
-            username:
-              type: string
-            avatar:
-              type: string
-        questions:
-          type: array
-          items:
-            $ref: '#/components/schemas/Question'
-        createdAt:
-          type: string
-          format: date-time
-        accessCode:
-          type: string
-          example: "123456"
-
-    Question:
-      type: object
-      properties:
-        _id:
-          type: string
-        questionText:
-          type: string
-          example: "What is a closure in JavaScript?"
-        questionType:
-          type: string
-          enum: [multiple-choice, true-false, short-answer]
-          example: "multiple-choice"
-        options:
-          type: array
-          items:
-            type: object
-            properties:
-              text:
-                type: string
-              isCorrect:
-                type: boolean
-        correctAnswer:
-          type: string
-        points:
-          type: number
-          example: 10
-        image:
-          type: string
-        explanation:
-          type: string
-
-    QuizAttempt:
-      type: object
-      properties:
-        _id:
-          type: string
-        quizId:
-          type: string
-        userId:
-          type: string
-        status:
-          type: string
-          enum: [in_progress, completed]
-        score:
-          type: number
-        percentage:
-          type: number
-        totalPoints:
-          type: number
-        timeSpent:
-          type: number
-        startedAt:
-          type: string
-          format: date-time
-        completedAt:
-          type: string
-          format: date-time
-        answers:
-          type: array
-          items:
-            type: object
-
-    Comment:
-      type: object
-      properties:
-        _id:
-          type: string
-        quizId:
-          type: string
-        userId:
-          type: object
-          properties:
-            _id:
-              type: string
-            username:
-              type: string
-            avatar:
-              type: string
-        text:
-          type: string
-        createdAt:
-          type: string
-          format: date-time
-
 paths:
-  # ==================== AUTHENTICATION ====================
+  # ========== AUTH ROUTES ==========
   /auth/signup:
     post:
       tags:
         - Authentication
       summary: Register a new user
-      description: Create a new user account. Email verification required after signup.
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required:
-                - username
-                - email
-                - password
               properties:
                 username:
                   type: string
-                  example: "johndoe"
                 email:
                   type: string
-                  format: email
-                  example: "john@example.com"
                 password:
                   type: string
-                  format: password
-                  example: "SecurePass123!"
-                  description: "Must contain min 8 chars, one uppercase, one lowercase, one number, one special char"
                 role:
                   type: string
                   enum: [student, teacher]
-                  default: student
       responses:
         '201':
-          description: User created successfully
+          description: User signed up successfully
           content:
             application/json:
               schema:
@@ -254,50 +43,37 @@ paths:
                     type: string
                     example: "You've signed up successfully. Now please verify your email to continue"
         '400':
-          description: Validation error or user already exists
+          description: Bad request - validation errors
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "All fields are required"
         '500':
-          description: Server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+          description: Internal server error
 
   /auth/login:
     post:
       tags:
         - Authentication
       summary: Login user
-      description: Authenticate user and receive JWT token in cookie
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required:
-                - email
-                - password
               properties:
                 email:
                   type: string
-                  format: email
-                  example: "john@example.com"
                 password:
                   type: string
-                  format: password
-                  example: "SecurePass123!"
       responses:
         '200':
           description: Login successful
-          headers:
-            Set-Cookie:
-              schema:
-                type: string
-                example: token=abcdef123456; Path=/; HttpOnly; Secure; SameSite=Strict
           content:
             application/json:
               schema:
@@ -311,20 +87,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Invalid credentials for user"
         '500':
-          description: Server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+          description: Internal server error
 
   /auth/logout:
     post:
       tags:
         - Authentication
       summary: Logout user
-      description: Clear authentication cookie
       security:
         - cookieAuth: []
       responses:
@@ -343,20 +118,7 @@ paths:
     post:
       tags:
         - Authentication
-      summary: Verify email address
-      description: Verify user email with token sent to email
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - token
-              properties:
-                token:
-                  type: string
-                  example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      summary: Verify email with token
       responses:
         '200':
           description: Email verified successfully
@@ -368,12 +130,6 @@ paths:
                   message:
                     type: string
                     example: "Email successfully verified and logged in"
-        '400':
-          description: Invalid or expired token
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
 
   /auth/verify/resend:
     post:
@@ -386,16 +142,12 @@ paths:
           application/json:
             schema:
               type: object
-              required:
-                - email
               properties:
                 email:
                   type: string
-                  format: email
-                  example: "john@example.com"
       responses:
         '200':
-          description: Verification email resent
+          description: Verification email sent
           content:
             application/json:
               schema:
@@ -403,35 +155,27 @@ paths:
                 properties:
                   message:
                     type: string
-                    example: "Verification email resent to john@example.com"
+                    example: "Verification email resent to user@example.com"
         '404':
           description: User not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
 
   /auth/forgot-password:
     post:
       tags:
         - Authentication
-      summary: Request password reset
+      summary: Request password reset link
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required:
-                - email
               properties:
                 email:
                   type: string
-                  format: email
-                  example: "john@example.com"
       responses:
         '200':
-          description: Reset link sent (if email exists)
+          description: Reset link sent
           content:
             application/json:
               schema:
@@ -452,17 +196,11 @@ paths:
           application/json:
             schema:
               type: object
-              required:
-                - token
-                - newPassword
               properties:
                 token:
                   type: string
-                  example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
                 newPassword:
                   type: string
-                  format: password
-                  example: "NewSecurePass123!"
       responses:
         '200':
           description: Password reset successful
@@ -475,13 +213,9 @@ paths:
                     type: string
                     example: "Password successfully reset"
         '400':
-          description: Invalid token or password requirements not met
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+          description: Invalid or expired token
 
-  # ==================== USER ====================
+  # ========== USER ROUTES ==========
   /user/profile:
     get:
       tags:
@@ -501,14 +235,18 @@ paths:
                     type: string
                     example: "Ok"
                   payload:
-                    $ref: '#/components/schemas/User'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
+                    type: object
+                    properties:
+                      email:
+                        type: string
+                      username:
+                        type: string
+                      isEmailVerified:
+                        type: boolean
+                      role:
+                        type: string
+                      avatar:
+                        type: string
     put:
       tags:
         - User
@@ -521,11 +259,6 @@ paths:
           application/json:
             schema:
               type: object
-              properties:
-                name:
-                  type: string
-                surname:
-                  type: string
       responses:
         '200':
           description: Profile updated
@@ -541,7 +274,7 @@ paths:
                     type: object
                     properties:
                       user:
-                        $ref: '#/components/schemas/User'
+                        type: object
 
   /user/password:
     patch:
@@ -556,19 +289,14 @@ paths:
           application/json:
             schema:
               type: object
-              required:
-                - oldPassword
-                - newPassword
               properties:
                 oldPassword:
                   type: string
-                  format: password
                 newPassword:
                   type: string
-                  format: password
       responses:
         '200':
-          description: Password updated
+          description: Password changed successfully
           content:
             application/json:
               schema:
@@ -578,11 +306,7 @@ paths:
                     type: string
                     example: "Password has been successfully changed"
         '400':
-          description: Wrong credentials
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+          description: Wrong credentials or validation error
 
   /user/username:
     patch:
@@ -597,12 +321,9 @@ paths:
           application/json:
             schema:
               type: object
-              required:
-                - newUsername
               properties:
                 newUsername:
                   type: string
-                  example: "newusername123"
       responses:
         '200':
           description: Username updated
@@ -615,17 +336,13 @@ paths:
                     type: string
                     example: "Username updated successfully"
         '400':
-          description: Username already taken
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+          description: Username is busy
 
   /user/avatar:
     post:
       tags:
         - User
-      summary: Upload user avatar
+      summary: Upload avatar
       security:
         - cookieAuth: []
       requestBody:
@@ -634,8 +351,6 @@ paths:
           multipart/form-data:
             schema:
               type: object
-              required:
-                - avatar
               properties:
                 avatar:
                   type: string
@@ -656,7 +371,6 @@ paths:
                     properties:
                       picture:
                         type: string
-                        example: "avatar-123456.jpg"
 
   /user/streak:
     get:
@@ -667,7 +381,7 @@ paths:
         - cookieAuth: []
       responses:
         '200':
-          description: Streak data retrieved
+          description: Streak information
           content:
             application/json:
               schema:
@@ -675,13 +389,11 @@ paths:
                 properties:
                   currentStreak:
                     type: number
-                    example: 5
                   lastQuizDate:
                     type: string
                     format: date-time
                   longestStreak:
                     type: number
-                    example: 12
 
   /user/stats:
     get:
@@ -700,40 +412,31 @@ paths:
                 properties:
                   totalQuizzes:
                     type: number
-                    example: 25
                   averageScore:
                     type: number
-                    example: 85.5
                   bestScore:
                     type: number
-                    example: 100
                   averageTime:
                     type: number
-                    example: 180.5
                   totalTime:
                     type: number
-                    example: 4512.5
                   accuracy:
                     type: number
-                    example: 87.3
                   correctAnswers:
                     type: number
-                    example: 218
                   totalQuestions:
                     type: number
-                    example: 250
                   strongestCategory:
                     type: string
-                    example: "programming"
                   weakestCategory:
                     type: string
-                    example: "history"
                   lastQuizDate:
                     type: string
                     format: date-time
                   quizzesThisMonth:
                     type: number
-                    example: 8
+        '500':
+          description: Failed to fetch stats
 
   /user/{id}/favorites:
     post:
@@ -748,19 +451,15 @@ paths:
           required: true
           schema:
             type: string
-          description: User ID
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required:
-                - quizId
               properties:
                 quizId:
                   type: string
-                  example: "507f1f77bcf86cd799439011"
       responses:
         '200':
           description: Quiz added to favorites
@@ -779,7 +478,10 @@ paths:
                         type: array
                         items:
                           type: string
-
+        '404':
+          description: User not found
+        '500':
+          description: Internal server error
     get:
       tags:
         - User
@@ -792,7 +494,6 @@ paths:
           required: true
           schema:
             type: string
-          description: User ID
       responses:
         '200':
           description: Favorites retrieved
@@ -804,7 +505,25 @@ paths:
                   favorites:
                     type: array
                     items:
-                      $ref: '#/components/schemas/Quiz'
+                      type: object
+                      properties:
+                        _id:
+                          type: string
+                        title:
+                          type: string
+                        description:
+                          type: string
+                        difficulty:
+                          type: string
+                        category:
+                          type: string
+                        points:
+                          type: number
+                        createdAt:
+                          type: string
+                          format: date-time
+        '404':
+          description: User not found
 
   /user/{id}/favorites/{quizId}:
     delete:
@@ -819,13 +538,11 @@ paths:
           required: true
           schema:
             type: string
-          description: User ID
         - name: quizId
           in: path
           required: true
           schema:
             type: string
-          description: Quiz ID
       responses:
         '200':
           description: Quiz removed from favorites
@@ -844,8 +561,10 @@ paths:
                         type: array
                         items:
                           type: string
+        '404':
+          description: User not found
 
-  # ==================== QUIZ ====================
+# ========== QUIZ ROUTES ==========
   /quiz:
     get:
       tags:
@@ -855,7 +574,7 @@ paths:
         - cookieAuth: []
       responses:
         '200':
-          description: All published quizzes
+          description: All published quizzes retrieved
           content:
             application/json:
               schema:
@@ -881,21 +600,29 @@ paths:
                           type: string
                         createdBy:
                           type: object
+                          properties:
+                            username:
+                              type: string
+                            avatar:
+                              type: string
                         questionCount:
                           type: number
                         createdAt:
                           type: string
+                          format: date-time
+        '500':
+          description: Server error
 
   /quiz/history/standard:
     get:
       tags:
         - Quiz
-      summary: Get user's standard quiz history
+      summary: Get standard quiz history
       security:
         - cookieAuth: []
       responses:
         '200':
-          description: Quiz history retrieved
+          description: Standard quiz history retrieved
           content:
             application/json:
               schema:
@@ -903,19 +630,22 @@ paths:
                 properties:
                   message:
                     type: string
+                    example: "Standard quizzes history retrieved successfully"
                   payload:
                     type: object
                     properties:
                       history:
                         type: array
                         items:
-                          $ref: '#/components/schemas/QuizAttempt'
+                          type: object
+        '500':
+          description: Error retrieving history
 
   /quiz/history/live:
     get:
       tags:
         - Quiz
-      summary: Get user's live quiz history
+      summary: Get live quiz history
       security:
         - cookieAuth: []
       responses:
@@ -928,13 +658,16 @@ paths:
                 properties:
                   message:
                     type: string
+                    example: "Live quizzes history retrieved successfully."
                   payload:
                     type: object
                     properties:
                       history:
                         type: array
                         items:
-                          $ref: '#/components/schemas/QuizAttempt'
+                          type: object
+        '500':
+          description: Error retrieving history
 
   /quiz/{id}:
     get:
@@ -949,7 +682,6 @@ paths:
           required: true
           schema:
             type: string
-          description: Quiz ID
       responses:
         '200':
           description: Quiz retrieved
@@ -960,17 +692,41 @@ paths:
                 properties:
                   message:
                     type: string
+                    example: "Quiz retrieved"
                   payload:
                     type: object
                     properties:
                       quiz:
-                        $ref: '#/components/schemas/Quiz'
+                        type: object
+                        properties:
+                          _id:
+                            type: string
+                          title:
+                            type: string
+                          description:
+                            type: string
+                          category:
+                            type: string
+                          difficulty:
+                            type: string
+                          mode:
+                            type: string
+                          createdBy:
+                            type: object
+                          questions:
+                            type: array
+                            items:
+                              type: object
+                          comments:
+                            type: array
+                            items:
+                              type: object
+        '400':
+          description: Invalid quiz ID
         '404':
           description: Quiz not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
 
   /quiz/comments:
     post:
@@ -985,12 +741,9 @@ paths:
           application/json:
             schema:
               type: object
-              required:
-                - text
               properties:
                 text:
                   type: string
-                  example: "Great quiz!"
       responses:
         '201':
           description: Comment added
@@ -1001,11 +754,16 @@ paths:
                 properties:
                   message:
                     type: string
+                    example: "Comment added"
                   payload:
                     type: object
                     properties:
                       comment:
-                        $ref: '#/components/schemas/Comment'
+                        type: object
+        '400':
+          description: Comment text cannot be empty
+        '500':
+          description: Internal server error
 
   /quiz/{quizId}/comments:
     get:
@@ -1030,13 +788,16 @@ paths:
                 properties:
                   message:
                     type: string
+                    example: "Comments retrieved"
                   payload:
                     type: object
                     properties:
                       comments:
                         type: array
                         items:
-                          $ref: '#/components/schemas/Comment'
+                          type: object
+        '500':
+          description: Internal server error
 
   /quiz/{quizId}/comments/{commentId}:
     patch:
@@ -1062,8 +823,6 @@ paths:
           application/json:
             schema:
               type: object
-              required:
-                - text
               properties:
                 text:
                   type: string
@@ -1077,18 +836,20 @@ paths:
                 properties:
                   message:
                     type: string
+                    example: "Comment updated"
                   payload:
                     type: object
                     properties:
                       comment:
-                        $ref: '#/components/schemas/Comment'
+                        type: object
+        '400':
+          description: Comment text cannot be empty
         '403':
           description: Not authorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
+        '404':
+          description: Comment not found
+        '500':
+          description: Internal server error
     delete:
       tags:
         - Quiz
@@ -1116,11 +877,18 @@ paths:
                 properties:
                   message:
                     type: string
+                    example: "Comment deleted"
                   payload:
                     type: object
                     properties:
                       id:
                         type: string
+        '403':
+          description: Not authorized
+        '404':
+          description: Comment not found
+        '500':
+          description: Internal server error
 
   /quiz/{id}/take:
     get:
@@ -1135,7 +903,6 @@ paths:
           required: true
           schema:
             type: string
-          description: Quiz ID
       responses:
         '201':
           description: Quiz attempt started
@@ -1146,6 +913,7 @@ paths:
                 properties:
                   message:
                     type: string
+                    example: "Quiz attempt started"
                   payload:
                     type: object
                     properties:
@@ -1158,18 +926,19 @@ paths:
                             type: string
                           startedAt:
                             type: string
+                            format: date-time
                           totalPoints:
                             type: number
                       questions:
                         type: array
                         items:
-                          $ref: '#/components/schemas/Question'
+                          type: object
         '400':
-          description: Already have an in-progress attempt
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+          description: Already has in-progress attempt
+        '404':
+          description: Quiz not found
+        '500':
+          description: Internal server error
 
   /quiz/attempt/{attemptId}/answer:
     post:
@@ -1190,8 +959,6 @@ paths:
           application/json:
             schema:
               type: object
-              required:
-                - questionId
               properties:
                 questionId:
                   type: string
@@ -1211,16 +978,21 @@ paths:
                 properties:
                   message:
                     type: string
+                    example: "Answer saved as draft"
                   questionId:
                     type: string
                   totalAnswered:
                     type: number
+        '404':
+          description: Attempt not found
+        '500':
+          description: Internal server error
 
   /quiz/attempt/{attemptId}/submit:
     post:
       tags:
         - Quiz
-      summary: Submit quiz attempt
+      summary: Submit quiz
       security:
         - cookieAuth: []
       parameters:
@@ -1239,6 +1011,7 @@ paths:
                 properties:
                   message:
                     type: string
+                    example: "Quiz submitted successfully"
                   payload:
                     type: object
                     properties:
@@ -1254,12 +1027,12 @@ paths:
                         type: number
                       totalQuestions:
                         type: number
+        '400':
+          description: No answers found
         '404':
           description: Attempt not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
 
   /quiz/attempt/{attemptId}/resume:
     get:
@@ -1284,12 +1057,19 @@ paths:
                 properties:
                   message:
                     type: string
+                    example: "Quiz resumed"
                   attempt:
                     type: object
                   draftAnswers:
                     type: object
                   questions:
                     type: array
+                    items:
+                      type: object
+        '404':
+          description: Attempt not found
+        '500':
+          description: Internal server error
 
   /quiz/{quizId}/restart:
     post:
@@ -1306,7 +1086,7 @@ paths:
             type: string
       responses:
         '201':
-          description: Quiz restarted
+          description: Quiz restarted successfully
           content:
             application/json:
               schema:
@@ -1314,15 +1094,20 @@ paths:
                 properties:
                   message:
                     type: string
+                    example: "Quiz restarted successfully"
                   attemptId:
                     type: string
                   questions:
                     type: array
+                    items:
+                      type: object
+        '500':
+          description: Internal server error
 
   /quiz/{id}/live/start:
     post:
       tags:
-        - Quiz
+        - Quiz - Live
       summary: Start live quiz session (Teacher only)
       security:
         - cookieAuth: []
@@ -1342,6 +1127,7 @@ paths:
                 properties:
                   message:
                     type: string
+                    example: "Live quiz lobby opened"
                   payload:
                     type: object
                     properties:
@@ -1358,18 +1144,20 @@ paths:
                             type: boolean
                           totalQuestions:
                             type: number
+        '400':
+          description: Quiz is not in live mode or already running
         '403':
-          description: Unauthorized - Teacher only
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+          description: Unauthorized
+        '404':
+          description: Quiz not found
+        '500':
+          description: Internal server error
 
   /quiz/{id}/live/join:
     post:
       tags:
-        - Quiz
-      summary: Join live quiz session
+        - Quiz - Live
+      summary: Join live quiz (Student)
       security:
         - cookieAuth: []
       parameters:
@@ -1384,12 +1172,9 @@ paths:
           application/json:
             schema:
               type: object
-              required:
-                - accessCode
               properties:
                 accessCode:
                   type: string
-                  example: "123456"
       responses:
         '200':
           description: Successfully joined quiz
@@ -1400,21 +1185,33 @@ paths:
                 properties:
                   message:
                     type: string
+                    example: "Successfully joined quiz"
                   quiz:
                     type: object
+                    properties:
+                      _id:
+                        type: string
+                      title:
+                        type: string
+                      description:
+                        type: string
+                      totalQuestions:
+                        type: number
+                      quizStarted:
+                        type: boolean
         '400':
-          description: Quiz already started or not active
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+          description: Quiz session not active or already started
+        '404':
+          description: Quiz not found
+        '500':
+          description: Internal server error
 
-  # ==================== ADMIN - QUIZ ====================
+  # ========== ADMIN QUIZ ROUTES ==========
   /admin/quiz:
     post:
       tags:
         - Admin - Quiz
-      summary: Create a new quiz (Teacher only)
+      summary: Create quiz (Teacher only)
       security:
         - cookieAuth: []
       requestBody:
@@ -1423,31 +1220,21 @@ paths:
           application/json:
             schema:
               type: object
-              required:
-                - title
-                - category
-                - difficulty
               properties:
                 title:
                   type: string
-                  example: "Advanced JavaScript"
                 description:
                   type: string
-                  example: "Test your advanced JS knowledge"
                 category:
                   type: string
-                  example: "programming"
                 difficulty:
                   type: string
                   enum: [easy, medium, hard]
-                  example: "hard"
                 mode:
                   type: string
                   enum: [standard, live]
-                  default: standard
                 isPublished:
                   type: boolean
-                  default: false
       responses:
         '201':
           description: Quiz created successfully
@@ -1463,19 +1250,11 @@ paths:
                     type: object
                     properties:
                       quiz:
-                        $ref: '#/components/schemas/Quiz'
+                        type: object
         '400':
           description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden - Teacher role required
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
 
   /admin/quiz/published:
     get:
@@ -1494,13 +1273,16 @@ paths:
                 properties:
                   message:
                     type: string
+                    example: "All published quizzes"
                   payload:
                     type: object
                     properties:
                       quizzes:
                         type: array
                         items:
-                          $ref: '#/components/schemas/Quiz'
+                          type: object
+        '500':
+          description: Internal server error
 
   /admin/quiz/unpublished:
     get:
@@ -1519,19 +1301,22 @@ paths:
                 properties:
                   message:
                     type: string
+                    example: "All unpublished quizzes"
                   payload:
                     type: object
                     properties:
                       quizzes:
                         type: array
                         items:
-                          $ref: '#/components/schemas/Quiz'
+                          type: object
+        '500':
+          description: Internal server error
 
   /admin/quiz/{id}:
     get:
       tags:
         - Admin - Quiz
-      summary: Get quiz by ID (admin view)
+      summary: Get quiz by ID (Admin view - Teacher only)
       security:
         - cookieAuth: []
       parameters:
@@ -1540,10 +1325,9 @@ paths:
           required: true
           schema:
             type: string
-          description: Quiz ID
       responses:
         '200':
-          description: Quiz retrieved
+          description: Quiz retrieved successfully
           content:
             application/json:
               schema:
@@ -1551,28 +1335,24 @@ paths:
                 properties:
                   message:
                     type: string
+                    example: "Quiz retrieved successfully"
                   payload:
                     type: object
                     properties:
                       quiz:
-                        $ref: '#/components/schemas/Quiz'
+                        type: object
+        '400':
+          description: Invalid quiz ID
         '403':
-          description: Not authorized to view this quiz
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+          description: Not authorized
         '404':
           description: Quiz not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
+        '500':
+          description: Internal server error
     put:
       tags:
         - Admin - Quiz
-      summary: Update quiz
+      summary: Update quiz (Teacher only)
       security:
         - cookieAuth: []
       parameters:
@@ -1596,12 +1376,10 @@ paths:
                   type: string
                 difficulty:
                   type: string
-                  enum: [easy, medium, hard]
                 isPublished:
                   type: boolean
                 mode:
                   type: string
-                  enum: [standard, live]
                 accessCode:
                   type: string
       responses:
@@ -1614,22 +1392,22 @@ paths:
                 properties:
                   message:
                     type: string
+                    example: "Quiz updated successfully"
                   payload:
                     type: object
                     properties:
                       quiz:
-                        $ref: '#/components/schemas/Quiz'
+                        type: object
         '403':
           description: Not authorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
+        '404':
+          description: Quiz not found
+        '500':
+          description: Internal server error
     delete:
       tags:
         - Admin - Quiz
-      summary: Delete quiz
+      summary: Delete quiz (Teacher only)
       security:
         - cookieAuth: []
       parameters:
@@ -1654,24 +1432,20 @@ paths:
                     properties:
                       id:
                         type: string
+        '400':
+          description: Invalid quiz ID
         '403':
           description: Not authorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
         '404':
           description: Quiz not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
 
   /admin/quiz/{id}/stats:
     get:
       tags:
         - Admin - Quiz
-      summary: Get quiz statistics
+      summary: Get quiz statistics (Teacher only)
       security:
         - cookieAuth: []
       parameters:
@@ -1690,12 +1464,12 @@ paths:
                 properties:
                   message:
                     type: string
+                    example: "Quiz stats retrieved successfully"
                   stats:
                     type: object
                     properties:
                       totalAttempts:
                         type: number
-                        example: 50
                       scoreRanges:
                         type: object
                         properties:
@@ -1709,20 +1483,26 @@ paths:
                             type: number
                       averageScore:
                         type: number
-                        example: 75.5
                       highestScore:
                         type: number
-                        example: 98.5
                       activeParticipants:
                         type: array
                         items:
                           type: object
+        '400':
+          description: Invalid quiz ID
+        '403':
+          description: Unauthorized
+        '404':
+          description: Quiz not found
+        '500':
+          description: Internal server error
 
   /admin/quiz/{id}/participants:
     get:
       tags:
         - Admin - Quiz
-      summary: Search quiz participants (live quiz only)
+      summary: Search quiz participants (Teacher only)
       security:
         - cookieAuth: []
       parameters:
@@ -1733,9 +1513,9 @@ paths:
             type: string
         - name: search
           in: query
+          required: false
           schema:
             type: string
-          description: Search by username or email
       responses:
         '200':
           description: Participants retrieved
@@ -1746,29 +1526,30 @@ paths:
                 properties:
                   message:
                     type: string
+                    example: "Participants retrieved successfully"
                   participants:
                     type: array
                     items:
                       type: object
                       properties:
-                        _id:
-                          type: string
                         username:
                           type: string
                         email:
                           type: string
         '400':
-          description: Not a live quiz
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+          description: Invalid quiz ID or not a live quiz
+        '403':
+          description: Not authorized
+        '404':
+          description: Quiz not found
+        '500':
+          description: Internal server error
 
   /admin/quiz/{id}/publish:
     patch:
       tags:
         - Admin - Quiz
-      summary: Publish quiz
+      summary: Publish quiz (Teacher only)
       security:
         - cookieAuth: []
       parameters:
@@ -1790,16 +1571,16 @@ paths:
                     example: "Quiz is published"
         '403':
           description: Not authorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+        '404':
+          description: Quiz not found
+        '500':
+          description: Internal server error
 
   /admin/quiz/{id}/unpublish:
     patch:
       tags:
         - Admin - Quiz
-      summary: Unpublish quiz
+      summary: Unpublish quiz (Teacher only)
       security:
         - cookieAuth: []
       parameters:
@@ -1821,17 +1602,16 @@ paths:
                     example: "Quiz is unpublished. Check your draft."
         '403':
           description: Not authorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+        '404':
+          description: Quiz not found
+        '500':
+          description: Internal server error
 
-  # ==================== QUESTIONS ====================
   /admin/quiz/{quizId}/questions:
     post:
       tags:
-        - Admin - Quiz
-      summary: Add question to quiz
+        - Admin - Questions
+      summary: Add question to quiz (Teacher only)
       security:
         - cookieAuth: []
       parameters:
@@ -1846,37 +1626,28 @@ paths:
           multipart/form-data:
             schema:
               type: object
-              required:
-                - questionText
-                - questionType
               properties:
                 questionText:
                   type: string
-                  example: "What is a closure?"
                 questionType:
                   type: string
                   enum: [multiple-choice, true-false, short-answer]
-                  example: "multiple-choice"
                 options:
-                  type: string
-                  description: JSON string of options array
-                  example: '[{"text":"Option 1","isCorrect":true},{"text":"Option 2","isCorrect":false}]'
+                  type: array
+                  items:
+                    type: object
                 correctAnswer:
                   type: string
-                  example: "For true-false or short-answer"
                 points:
                   type: number
-                  default: 1
-                  example: 10
                 explanation:
                   type: string
-                  example: "Explanation of the answer"
                 image:
                   type: string
                   format: binary
       responses:
         '201':
-          description: Question added
+          description: Question added successfully
           content:
             application/json:
               schema:
@@ -1884,25 +1655,21 @@ paths:
                 properties:
                   message:
                     type: string
+                    example: "Question added successfully"
                   payload:
-                    $ref: '#/components/schemas/Question'
+                    type: object
         '400':
           description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
         '403':
           description: Not authorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
+        '404':
+          description: Quiz not found
+        '500':
+          description: Internal server error
     get:
       tags:
-        - Admin - Quiz
-      summary: Get all questions for a quiz
+        - Admin - Questions
+      summary: Get all questions for quiz (Teacher only)
       security:
         - cookieAuth: []
       parameters:
@@ -1921,19 +1688,22 @@ paths:
                 properties:
                   message:
                     type: string
+                    example: "Ok"
                   payload:
                     type: object
                     properties:
                       questions:
                         type: array
                         items:
-                          $ref: '#/components/schemas/Question'
+                          type: object
+        '500':
+          description: Internal server error
 
   /admin/quiz/questions/{questionId}:
     get:
       tags:
-        - Admin - Quiz
-      summary: Get question by ID
+        - Admin - Questions
+      summary: Get question by ID (Teacher only)
       security:
         - cookieAuth: []
       parameters:
@@ -1952,22 +1722,20 @@ paths:
                 properties:
                   message:
                     type: string
+                    example: "Ok"
                   payload:
                     type: object
                     properties:
                       question:
-                        $ref: '#/components/schemas/Question'
+                        type: object
         '404':
           description: Question not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
+        '500':
+          description: Internal server error
     put:
       tags:
-        - Admin - Quiz
-      summary: Update question
+        - Admin - Questions
+      summary: Update question (Teacher only)
       security:
         - cookieAuth: []
       parameters:
@@ -1987,10 +1755,10 @@ paths:
                   type: string
                 questionType:
                   type: string
-                  enum: [multiple-choice, true-false, short-answer]
                 options:
-                  type: string
-                  description: JSON string of options array
+                  type: array
+                  items:
+                    type: object
                 correctAnswer:
                   type: string
                 points:
@@ -2002,10 +1770,9 @@ paths:
                   format: binary
                 removeImage:
                   type: boolean
-                  description: Set to true to remove existing image
       responses:
         '200':
-          description: Question updated
+          description: Question updated successfully
           content:
             application/json:
               schema:
@@ -2013,25 +1780,21 @@ paths:
                 properties:
                   message:
                     type: string
+                    example: "Question updated successfully."
                   question:
-                    $ref: '#/components/schemas/Question'
+                    type: object
         '400':
           description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
         '403':
           description: Not authorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
+        '404':
+          description: Question or quiz not found
+        '500':
+          description: Internal server error
     delete:
       tags:
-        - Admin - Quiz
-      summary: Delete question
+        - Admin - Questions
+      summary: Delete question (Teacher only)
       security:
         - cookieAuth: []
       parameters:
@@ -2042,7 +1805,7 @@ paths:
             type: string
       responses:
         '200':
-          description: Question deleted
+          description: Question deleted successfully
           content:
             application/json:
               schema:
@@ -2050,6 +1813,7 @@ paths:
                 properties:
                   message:
                     type: string
+                    example: "Question deleted successfully."
                   payload:
                     type: object
                     properties:
@@ -2059,14 +1823,14 @@ paths:
                           type: string
         '403':
           description: Not authorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
         '404':
-          description: Question not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+          description: Question or quiz not found
+        '500':
+          description: Internal server error
 
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: token

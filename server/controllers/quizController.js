@@ -18,7 +18,7 @@ class QuizController {
         difficulty: quiz.difficulty,
         createdBy: quiz.createdBy,
         questionCount: quiz.questions.length,
-        createdAt: quiz.createdAt
+        createdAt: quiz.createdAt,
       }));
 
       res
@@ -430,7 +430,7 @@ class QuizController {
             correctOptions.every((opt) => userOptions.includes(opt));
 
           pointsEarned = isCorrect ? question.points : 0;
-        } else if (question.questionType === "single-choice") {
+        } else if (question.type === "single-choice") {
           //one correct option
           const correctOptionIndex = question.options.findIndex(
             (opt) => opt.isCorrect
@@ -439,7 +439,7 @@ class QuizController {
 
           isCorrect = userOption === correctOptionIndex;
           pointsEarned = isCorrect ? question.points : 0;
-        } else if (question.questionType === "short-answer") {
+        } else if (question.type === "short-answer") {
           const correctText = question.correctAnswer?.trim().toLowerCase();
           const userText = userAnswer.textAnswer?.trim().toLowerCase();
 
@@ -456,50 +456,52 @@ class QuizController {
           isCorrect,
           pointsEarned,
         });
-
-        const percentage = (totalScore / attempt.totalPoints) * 100;
-
-        const completedAt = new Date();
-        const timeSpent = Math.floor((completedAt - attempt.startedAt) / 1000);
-
-        attempt.answers = gradedAnswers;
-        attempt.score = totalScore;
-        attempt.percentage = Number(percentage.toFixed(2));
-        attempt.timeSpent = timeSpent;
-        attempt.completedAt = new Date();
-        attempt.status = "completed";
-
-        await attempt.save();
-        await redis.del(redisKey);
-
-        // handle daily streak
-        const user = await User.findById(userId)
-        const today = new Date()
-        const lastQuizDate = new Date(user.lastQuizDate)
-
-        const diffDays = Math.floor((today-lastQuizDate) / (1000 * 60 * 60 * 24))
-        if(diffDays === 1) {
-          user.currentStreak = (user.currentStreak || 0) + 1 
-        } else if(diffDays > 1) {
-          user.currentStreak = 1 //start again
-        }
-
-        user.lastQuizDate = today;
-        await user.save()
-
-        res.status(200).json({
-          message: "Quiz submitted successfully",
-          payload: {
-            score: totalScore,
-            totalPoints: attempt.totalPoints,
-            percentage: attempt.percentage,
-            timeSpent: timeSpent,
-            correctAnswers: gradedAnswers.filter((a) => a.isCorrect === true)
-              .length,
-            totalQuestions: gradedAnswers.length,
-          },
-        });
       }
+
+      const percentage = (totalScore / attempt.totalPoints) * 100;
+
+      const completedAt = new Date();
+      const timeSpent = Math.floor((completedAt - attempt.startedAt) / 1000);
+
+      attempt.answers = gradedAnswers;
+      attempt.score = totalScore;
+      attempt.percentage = Number(percentage.toFixed(2));
+      attempt.timeSpent = timeSpent;
+      attempt.completedAt = new Date();
+      attempt.status = "completed";
+
+      await attempt.save();
+      await redis.del(redisKey);
+
+      // handle daily streak
+      const user = await User.findById(userId);
+      const today = new Date();
+      const lastQuizDate = new Date(user.lastQuizDate);
+
+      const diffDays = Math.floor(
+        (today - lastQuizDate) / (1000 * 60 * 60 * 24)
+      );
+      if (diffDays === 1) {
+        user.currentStreak = (user.currentStreak || 0) + 1;
+      } else if (diffDays > 1) {
+        user.currentStreak = 1; //start again
+      }
+
+      user.lastQuizDate = today;
+      await user.save();
+
+      res.status(200).json({
+        message: "Quiz submitted successfully",
+        payload: {
+          score: totalScore,
+          totalPoints: attempt.totalPoints,
+          percentage: attempt.percentage,
+          timeSpent: timeSpent,
+          correctAnswers: gradedAnswers.filter((a) => a.isCorrect === true)
+            .length,
+          totalQuestions: gradedAnswers.length,
+        },
+      });
     } catch (err) {
       console.error("Failed to submit quiz:", err);
       res.status(500).json({ message: "Internal server error" });
@@ -529,7 +531,7 @@ class QuizController {
 
       // Get draft answers
       const redisKey = `attempt:${attemptId}:answers`;
-      const draftData = await redisClient.get(redisKey);
+      const draftData = await redis.get(redisKey);
       const draftAnswers = draftData ? JSON.parse(draftData) : {};
 
       res.status(200).json({
@@ -622,17 +624,17 @@ class QuizController {
       quiz.startTime = new Date();
       await quiz.save();
 
-       res.status(200).json({
+      res.status(200).json({
         message: "Live quiz lobby opened",
         payload: {
           quiz: {
-          _id: quiz._id,
-          title: quiz.title,
-          accessCode: quiz.accessCode,
-          isActive: quiz.isActive,
-          totalQuestions: quiz.questions.length,
-      },
-        }
+            _id: quiz._id,
+            title: quiz.title,
+            accessCode: quiz.accessCode,
+            isActive: quiz.isActive,
+            totalQuestions: quiz.questions.length,
+          },
+        },
       });
     } catch (err) {
       console.error("Failed to start live session:", err);
@@ -643,10 +645,14 @@ class QuizController {
   async joinLiveQuiz(req, res) {
     const { accessCode } = req.body;
     const userId = req.user._id;
-    const quizId = req.params.id
+    const quizId = req.params.id;
 
     try {
-      const quiz = await Quiz.findOne({ _id: quizId, accessCode, mode: "live" });
+      const quiz = await Quiz.findOne({
+        _id: quizId,
+        accessCode,
+        mode: "live",
+      });
 
       if (!quiz) {
         return res
@@ -661,7 +667,7 @@ class QuizController {
       // can't join if quiz already started
       const stateKey = `live:${quizId}:state`;
       const data = await redis.get(stateKey);
-      const quizState =  data ? JSON.parse(data) : null;
+      const quizState = data ? JSON.parse(data) : null;
 
       if (quizState && quizState.quizStarted) {
         return res.status(400).json({
@@ -701,7 +707,6 @@ class QuizController {
       res.status(500).json({ message: "Internal server error" });
     }
   }
-
 }
 
 export default new QuizController();
