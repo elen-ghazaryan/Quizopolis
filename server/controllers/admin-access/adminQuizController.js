@@ -50,9 +50,9 @@ class AdminQuizController {
         questions: [],
       };
 
-      if(mode === "live") {
-        quizData.participants = []
-        quizData.isActive = false
+      if (mode === "live") {
+        quizData.participants = [];
+        quizData.isActive = false;
       }
       const quiz = await Quiz.create(quizData);
 
@@ -60,7 +60,7 @@ class AdminQuizController {
         message: `${
           mode === "live" ? "Live" : "Standard"
         } quiz created successfully.`,
-        payload: {quiz},
+        payload: { quiz },
       });
     } catch (err) {
       console.error("Failed to create quiz: " + err);
@@ -345,7 +345,7 @@ class AdminQuizController {
     const {
       questionText,
       questionType,
-      options,
+      options: optionsRaw,
       correctAnswer,
       points,
       explanation,
@@ -355,16 +355,54 @@ class AdminQuizController {
       return res.status(400).send({ message: "Question text is required." });
     }
 
+    let options;
+    if (optionsRaw) {
+      try {
+        options = typeof optionsRaw === 'string' ? JSON.parse(optionsRaw) : optionsRaw;
+      } catch (err) {
+        return res.status(400).send({ message: "Invalid options format." });
+      }
+    }
+
     if (
-      !["multiple-choice", "true-false", "short-answer"].includes(questionType)
+      !["multiple-choice", "single-choice", "short-answer"].includes(
+        questionType
+      )
     ) {
       return res.status(400).send({
         message:
-          "Invalid question type. Must be 'multiple-choice', 'true-false' or 'short-answer'. ",
+          "Invalid question type. Must be 'multiple-choice', 'single-choice' or 'short-answer'. ",
       });
     }
 
-    if (questionType === "multiple-choice") {
+    if (questionType === "single-choice") {
+      if (!options || !Array.isArray(options) || options.length < 2) {
+        return res.status(400).send({
+          message:
+            "At least two options are required for single-choice questions.",
+        });
+      }
+
+      const invalidOption = options.find((opt) => !opt.text);
+      if (invalidOption) {
+        return res.status(400).send({ message: "Each option must have text." });
+      }
+
+      const correctOptions = options.filter((opt) => opt.isCorrect);
+      if (correctOptions.length === 0) {
+        return res
+          .status(400)
+          .send({ message: "One option must be marked as correct." });
+      }
+      if (correctOptions.length > 1) {
+        return res
+          .status(400)
+          .send({
+            message:
+              "Only one option can be marked as correct for single-choice questions.",
+          });
+      }
+    } else if (questionType === "multiple-choice") {
       if (!options || !Array.isArray(options) || options.length < 2) {
         return res.status(400).send({
           message:
@@ -384,10 +422,10 @@ class AdminQuizController {
           .send({ message: "At least one option must be marked as correct." });
       }
     } else {
+      // short-answer
       if (!correctAnswer || typeof correctAnswer !== "string") {
         return res.status(400).send({
-          message:
-            "Correct answer is required for true-false and short-answer questions.",
+          message: "Correct answer is required for text-answer questions.",
         });
       }
     }
@@ -411,7 +449,7 @@ class AdminQuizController {
 
       res.status(201).send({
         message: "Question added successfully",
-        payload: question,
+        payload: { question },
       });
     } catch (err) {
       console.log("Failed to add question: " + err);
@@ -507,7 +545,7 @@ class AdminQuizController {
       const {
         questionText,
         questionType,
-        options,
+        options: optionsRaw,
         correctAnswer,
         points,
         explanation,
@@ -515,10 +553,24 @@ class AdminQuizController {
       } = req.body || {};
       let image = question.image;
 
+      let options;
+      if (optionsRaw) {
+        try {
+          options = typeof optionsRaw === 'string' ? JSON.parse(optionsRaw) : optionsRaw;
+        } catch (err) {
+          return res.status(400).send({ message: "Invalid options format." });
+        }
+      }
+
       //Image handling logic
       if (req.file) {
         if (question.image) {
-          const oldImagePath = path.join(process.cwd(), "public", "uploads", question.image);
+          const oldImagePath = path.join(
+            process.cwd(),
+            "public",
+            "uploads",
+            question.image
+          );
           fs.unlink(oldImagePath, (err) => {
             if (err && err.code !== "ENOENT") {
               console.error("Failed to delete old image:", err);
@@ -527,9 +579,14 @@ class AdminQuizController {
             }
           });
         }
-        image = req.file.filename;
+        image = req.file.filename
       } else if (removeImage && question.image) {
-        const oldImagePath = path.join(process.cwd(),"public","uploads", question.image);
+        const oldImagePath = path.join(
+          process.cwd(),
+          "public",
+          "uploads",
+          question.image
+        );
         fs.unlink(oldImagePath, (err) => {
           if (err && err.code !== "ENOENT") {
             console.error("Failed to delete old image:", err);
@@ -550,7 +607,7 @@ class AdminQuizController {
 
       if (
         questionType !== undefined &&
-        !["multiple-choice", "true-false", "short-answer"].includes(
+        !["multiple-choice", "single-choice", "short-answer"].includes(
           questionType
         )
       ) {
@@ -580,10 +637,7 @@ class AdminQuizController {
         }
       }
 
-      if (
-        (effectiveType === "true-false" || effectiveType === "short-answer") &&
-        correctAnswer !== undefined
-      ) {
+      if (effectiveType === "short-answer" && correctAnswer !== undefined) {
         if (correctAnswer.trim() === "") {
           return res
             .status(400)
@@ -603,7 +657,7 @@ class AdminQuizController {
 
       res
         .status(200)
-        .send({ message: "Question updated successfully.", question });
+        .send({ message: "Question updated successfully.", payload: {question} });
     } catch (err) {
       console.error("Failed to update question:", err);
       res.status(500).send({ message: "Internal server error." });
@@ -617,11 +671,102 @@ class AdminQuizController {
       const quizzes = await Quiz.find({
         createdBy: userId,
         isPublished: true,
-      }).select("_id title description category difficulty questions mode");
+      }).select("_id title description category difficulty questions mode createdAt");
 
-      res.send({ message: "All published quizzes", payload: { quizzes } });
+      const standardQuizIds = quizzes
+        .filter(q => q.mode === "standard")
+        .map(q => q._id);
+
+      const liveQuizIds = quizzes
+        .filter(q => q.mode === "live")
+        .map(q => q._id);
+
+      
+      // stats
+
+      let standardStats = {
+        totalAttempts: 0,
+        avgScore: 0,
+        avgPercentage: 0,
+        avgTimeSpent: 0,
+        totalCompleted: 0,
+        completionRate: 0
+      };
+
+      let liveStats = {
+        totalParticipants: 0,
+        avgScore: 0
+      };
+
+      // standard quiz stats
+      if (standardQuizIds.length > 0) {
+        const stat = await QuizAttempt.aggregate([
+          { $match: { quizId: { $in: standardQuizIds } } },
+          {
+            $group: {
+              _id: null,
+              totalAttempts: { $sum: 1 },
+              avgScore: { $avg: "$score" },
+              avgPercentage: { $avg: "$percentage" },
+              avgTimeSpent: { $avg: "$timeSpent" },
+              totalCompleted: {
+                $sum: { $cond: [{ $eq: ["$status", "completed"] }, 1, 0] }
+              }
+            }
+          }
+        ]);
+
+        if (stat.length > 0) {
+          const s = stat[0];
+          standardStats = {
+            totalAttempts: s.totalAttempts,
+            avgScore: s.avgScore || 0,
+            avgPercentage: s.avgPercentage || 0,
+            avgTimeSpent: s.avgTimeSpent || 0,
+            totalCompleted: s.totalCompleted,
+            completionRate: s.totalAttempts
+              ? s.totalCompleted / s.totalAttempts
+              : 0
+          };
+        }
+      }
+
+      // live quiz stats
+      if (liveQuizIds.length > 0) {
+        const live = await Participant.aggregate([
+          { $match: { quizId: { $in: liveQuizIds } } },
+          {
+            $group: {
+              _id: null,
+              totalParticipants: { $sum: 1 },
+              avgScore: { $avg: "$score" }
+            }
+          }
+        ]);
+
+        if (live.length > 0) {
+          const l = live[0];
+          liveStats = {
+            totalParticipants: l.totalParticipants,
+            avgScore: l.avgScore || 0
+          };
+        }
+      }
+
+      
+      res.send({
+        message: "All published quizzes",
+        payload: {
+          quizzes,
+          stats: {
+            standard: standardStats,
+            live: liveStats
+          }
+        }
+      });
+
     } catch (err) {
-      console.log("Failed to get own published quizzes: " + err);
+      console.log("Failed to get own published quizzes:", err);
       res.status(500).send("Internal server error");
     }
   }
@@ -633,7 +778,7 @@ class AdminQuizController {
       const quizzes = await Quiz.find({
         createdBy: userId,
         isPublished: false,
-      }).select("_id title description category difficulty questions mode");
+      }).select("_id title description category difficulty questions mode createdAt");
 
       res.send({ message: "All unpublished quizzes", payload: { quizzes } });
     } catch (err) {

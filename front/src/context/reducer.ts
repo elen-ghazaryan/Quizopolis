@@ -7,7 +7,16 @@ export const reducer = (state: IState, action: IAction): IState => {
         ...state,
         user: action.payload
       };
-
+      case "UPDATE_AVATAR":
+        if(!state.user) return state;
+        return {
+          ...state,
+          user: {
+            ...state.user,
+            avatar: action.payload
+          }
+        };
+        
     default: 
     return state
   }

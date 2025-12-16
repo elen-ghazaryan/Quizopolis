@@ -30,6 +30,53 @@ class QuizController {
     }
   }
 
+  async searchStandardQuiz(req, res) {
+    try {
+      const { query } = req.query
+      if(!query || query.trim() === "") {
+        return res.status(400).send({ message: "Search query is missing" })
+      }
+
+      // searching by creators
+      const users = await User.find({
+        username: { $regex: query, $options: "i" }
+      }).select("_id")
+
+      const userIds = users.map(u => u._id)
+
+      const quizzes = await Quiz.find({
+        isPublished: true,
+        mode: "standard",
+        $or: [
+          { title: { $regex: query, $options: "i" } },
+          { description: { $regex: query, $options: "i" } },
+          { category: { $regex: query, $options: "i" } },
+          { createdBy: { $in: userIds } }
+        ]
+      })
+      .populate("createdBy", "username avatar")
+      .sort({ createdAt: -1})
+
+      const payload = quizzes.map(quiz => ({
+        _id: quiz._id,
+        titile: quiz.title,
+        description: quiz.description,
+        category: quiz.category,
+        difficulty: quiz.difficulty,
+        createdBy: quiz.createdBy,
+        questionCount: quiz.questions.length,
+        createdAt: quiz.createdAt
+      }))
+
+      res.status(200).json({ 
+      message: `Found ${payload.length} quiz(es)`, 
+      payload 
+    });
+    } catch (err) {
+      res.status(500).json({ message: "Server error" });
+    }
+  }
+
   async getStandardQuizHistory(req, res) {
     try {
       const userId = req.user._id;
@@ -132,6 +179,15 @@ class QuizController {
         return res.status(404).json({ message: "Quiz is not active" });
       }
 
+      let isFavorite = false;
+
+      if (req.user) {
+        isFavorite = await User.exists({
+          _id: req.user._id,
+          favorites: quiz._id,
+        });
+      }
+
       const payload = {
         _id: quiz._id,
         title: quiz.title,
@@ -142,6 +198,8 @@ class QuizController {
         createdBy: quiz.createdBy,
         questions: quiz.questions,
         comments: quiz.comments,
+        isFavorite,
+        createdAt: quiz.createdAt,
       };
 
       res

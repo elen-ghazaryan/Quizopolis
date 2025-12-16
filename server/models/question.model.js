@@ -12,6 +12,7 @@ const questionSchema = new Schema({
     enum: ["multiple-choice", "single-choice", "short-answer"],
     default: "single-choice",
   },
+  explanation: String,
 
   //for multiple/single choice
   options: [

@@ -1,0 +1,469 @@
+.container {
+  animation: containerFadeIn 0.6s ease-out;
+}
+
+.filterSection {
+  background: linear-gradient(135deg, #edc8e8 0%, #d9bde6 100%);
+  border-radius: 24px;
+  padding: 2rem;
+  margin-bottom: 2.5rem;
+  border: 2px solid #e5e7eb;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+  animation: slideDown 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  position: relative;
+  overflow: hidden;
+}
+
+.filterSection::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #cc6fd8 0%, #7e51ac 100%);
+  animation: shimmer 4s ease-in-out infinite;
+}
+
+.filterHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.sparkleIcon {
+  color: #8458cc;
+  animation: sparkle 3s ease-in-out infinite;
+}
+
+.filterTitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #6c63c0 0%, #67408d 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 0;
+  font-family: "Open sans", sans-serif;
+}
+
+.filters {
+  display: flex;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.filterGroup {
+  position: relative;
+  flex: 1;
+  min-width: 200px;
+  animation: filterSlideIn 0.6s ease-out;
+}
+
+.filterLabel {
+  display: flex;
+  align-items: center;
+  font-family: "Open sans";
+  gap: 0.5rem;
+  color: #374151;
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.filterLabel svg {
+  color: #667eea;
+}
+
+.filterSelect {
+  width: 100%;
+  font-family: "Montserrat", sans-serif;
+  padding: 0.875rem 2.5rem 0.875rem 1.25rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 14px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1f2937;
+  background: white;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  appearance: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.filterSelect:hover {
+  border-color: #8361e0;
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.15);
+  transform: translateY(-2px);
+}
+
+.filterSelect:focus {
+  outline: none;
+  border-color: #8361e0;
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+}
+
+.selectArrow {
+  position: absolute;
+  right: 1rem;
+  bottom: 1.125rem;
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid #5c72d6;
+  pointer-events: none;
+  transition: transform 0.3s ease;
+}
+
+.filterGroup:hover .selectArrow {
+  transform: translateY(2px);
+}
+
+.clearBtn {
+  padding: 0.875rem 1.75rem;
+  background: linear-gradient(135deg, #d43c3c 0%, #dc2626 100%);
+  color: white;
+  border: none;
+  font-family: "Montserrat";
+  border-radius: 14px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+  animation: bounceIn 0.6s ease-out;
+}
+
+.clearBtn:hover {
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 8px 20px rgba(239, 68, 68, 0.4);
+}
+
+.clearBtn:active {
+  transform: translateY(-1px) scale(1.02);
+}
+
+.resultsCount {
+  display: inline-flex;
+  font-family: "Elms sans", sans-serif;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #84a4e7 0%, #8554b6 100%);
+  border-radius: 14px;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  animation: countPop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.3s backwards;
+}
+
+.countNumber {
+  font-size: 1.75rem;
+  font-weight: 900;
+  color: white;
+  line-height: 1;
+}
+
+.countText {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.quizGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 2rem;
+  animation: gridFadeIn 0.8s ease-out 0.2s backwards;
+}
+
+.gridItem {
+  animation: itemFadeInUp 0.6s ease-out backwards;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 5rem 2rem;
+  animation: emptyStateFadeIn 0.8s ease-out;
+}
+
+.emptyIcon {
+  position: relative;
+  display: inline-block;
+  margin-bottom: 2rem;
+  animation: float 3s ease-in-out infinite;
+}
+
+.emptyIcon svg {
+  color: #9ca3af;
+  position: relative;
+  z-index: 1;
+}
+
+.emptyIconCircle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 120px;
+  height: 120px;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  border-radius: 50%;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.emptyTitle {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #374151;
+  margin: 0 0 1rem 0;
+  background: linear-gradient(135deg, #374151 0%, #6b7280 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.emptyText {
+  font-size: 1.1rem;
+  color: #6b7280;
+  margin: 0 0 2rem 0;
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.6;
+}
+
+.emptyBtn {
+  padding: 1rem 2.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 16px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.emptyBtn:hover {
+  transform: translateY(-4px) scale(1.05);
+  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.5);
+}
+
+.emptyBtn:active {
+  transform: translateY(-2px) scale(1.02);
+}
+
+@keyframes containerFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  0%, 100% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes sparkle {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2) rotate(180deg);
+    opacity: 0.8;
+  }
+}
+
+@keyframes filterSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes bounceIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes countPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes gridFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes itemFadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes emptyStateFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.3;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.1);
+    opacity: 0.5;
+  }
+}
+
+@media (max-width: 768px) {
+  .filterSection {
+    padding: 1.5rem;
+  }
+
+  .filters {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .filterGroup {
+    min-width: 100%;
+  }
+
+  .clearBtn {
+    width: 100%;
+  }
+
+  .quizGrid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .emptyState {
+    padding: 3rem 1rem;
+  }
+
+  .emptyTitle {
+    font-size: 1.5rem;
+  }
+
+  .emptyText {
+    font-size: 1rem;
+  }
+}
+
+
+.containerPublished  .filterSection{
+  background: rgb(247 242 200 / 95%);
+}
+
+.containerPublished .filterSection::before {
+  background:  linear-gradient(135deg, #ead766 0%, #f0df9f 100%);
+}
+
+.containerPublished .sparkleIcon {
+  color: rgb(252, 225, 74)
+}
+
+.containerPublished .filterTitle {
+  background: linear-gradient(135deg, #ea97fe 0%, #f5e33a 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.containerPublished .resultsCount {
+  background: linear-gradient(135deg, #ea97fe 0%, #f5e33a 100%);;
+}
+
+.containerPublished .filterLabel svg {
+  color: rgb(252, 225, 74)
+}
+
+.containerPublished .filterSelect:hover {
+  border-color: rgb(252, 225, 74);
+}
+
+.containerPublished .filterSelect:focus {
+  border-color: rgb(252, 225, 74);
+}
+
+.containerPublished .selectArrow {
+  border-top: 6px solid rgb(252, 225, 74);;
+}

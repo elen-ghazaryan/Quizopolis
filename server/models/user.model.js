@@ -25,6 +25,10 @@ const userSchema = new Schema({
     enum: ["teacher", "student"],
     default: "student"
   },
+  bio: {
+    type: String,
+    default: ""
+  },
   isEmailVerified: {
     type: Boolean,
     default: false

@@ -236,12 +236,12 @@ export const Intro: React.FC = () => {
             <p className={styles.quizFeedback}>
               {quizAnswer === 'Paris' ? (
                 <>
-                  <Smile color="green" size={20} style={{ marginRight: '5px' }} />
+                  <Smile stroke={'#b03dc6'} size={35} style={{ marginRight: '5px' }} />
                   Correct!
                 </>
               ) : (
                 <>
-                  <Frown color="red" size={20} style={{ marginRight: '5px' }} />
+                  <Frown stroke='#ef5d5d' size={35} style={{ marginRight: '5px' }} />
                   Try Again!
                 </>
               )}

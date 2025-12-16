@@ -22,7 +22,17 @@
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "noUncheckedSideEffectImports": true,
+
+    /* Path aliases */
+    "baseUrl": "src",
+    "paths": {
+      "@types": ["types.ts"],
+      "@components/*": ["components/*"],
+      "@pages/*": ["pages/*"],
+      "@config/*": ["config/*"]
+    }
+
   },
   "include": ["src"]
 }

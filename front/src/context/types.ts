@@ -10,6 +10,7 @@ export interface IUser {
   bio: string
 }
 
+
 export interface IState {
   user: IUser | null
 }
@@ -17,6 +18,8 @@ export interface IState {
 export type IAction = 
   | { type: 'SET_USER'; payload: IUser }
   | { type: 'UPDATE_USER'; payload: IUser }
+  | { type: 'UPDATE_AVATAR'; payload: string }
+
 
 
 export interface IAppContext {

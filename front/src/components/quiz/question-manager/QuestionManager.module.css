@@ -1,0 +1,402 @@
+.card {
+  max-width: 100%;
+  margin: 0 auto;
+  background: #e6ddebb0;
+  border-radius: 12px;
+  padding: 48px;
+  box-shadow: 0 2px 8px rgb(65 64 64 / 75%);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  font-family: "Montserrat", sans-serif;
+  align-items: flex-start;
+  margin-bottom: 32px;
+  padding-bottom: 24px;
+  border-bottom: 2px solid #d7b2e6;
+}
+
+.title {
+  font-size: 32px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  color: #261327;
+}
+
+.subtitle {
+  font-size: 15px;
+  color: #535252;
+  margin: 0;
+}
+.errorWrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 60vh;
+  padding: 20px;
+}
+
+.errorCard {
+  background: #fff;
+  border-radius: 16px;
+  padding: 32px;
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e5e7eb;
+}
+
+.errorTitle {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 8px;
+}
+
+.errorText {
+  font-size: 16px;
+  color: #64748b;
+}
+
+
+.finishButton {
+  padding: 12px 28px;
+  font-size: 15px;
+  font-weight: 500;
+  color: white;
+  background-color: #b567c5;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.4s;
+  font-family: inherit;
+}
+
+.finishButton:hover {
+  background-color: #8532df;
+  transform: scale(1.08);
+}
+
+.emptyState {
+  text-align: center;
+  padding: 80px 40px;
+}
+
+.emptyIcon {
+  margin-bottom: 24px;
+  color: #d475d4
+}
+
+.emptyTitle {
+  font-size: 30px;
+  font-weight: 600;
+  color: #3b1e3c;
+  font-family: "Montserrat", sans-serif;
+  margin: 0 0 10px 0;
+}
+
+.emptyText {
+  font-size: 14px;
+  color: #5e5e5e;
+  font-family: "Montserrat", sans-serif;
+  margin: 0 0 32px 0;
+}
+
+.addButton {
+  padding: 14px 32px;
+  font-size: 15px;
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(135deg, #f3e0b1, #a062c5);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+  font-family: "Open sans", sans-serif;
+}
+
+.addButton:hover {
+  background: linear-gradient(135deg, #f0df81, #8554e1db);
+  transform: scale(1.1);
+}
+
+.questionsList {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.questionCard {
+  border: 2px solid #d7b2e6;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 17%);
+}
+
+.questionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  font-family: "Montserrat";
+}
+
+.questionNumber {
+  font-size: 14px;
+  font-weight: 600;
+  color: #871d9d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.questionMeta {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.badge {
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #320469;
+  background-color: #e5f2ff;
+  border-radius: 12px;
+  text-transform: capitalize;
+}
+
+.points {
+  font-size: 14px;
+  font-weight: 500;
+  color: #535252;
+}
+
+.questionContent {
+  margin-bottom: 20px;
+}
+
+.questionText {
+  font-size: 16px;
+  font-weight: 500;
+  color: #1a1a1a;
+  font-family: "Open sans", sans-serif;
+  margin: 0 0 16px 0;
+  line-height: 1.5;
+}
+
+.questionImage {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  border: 1px solid #e5e5e7;
+}
+
+.optionsList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background-color: #f5f5f7;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  transition: all 0.2s;
+  font-family: "Elms sans", sans-serif;
+  font-weight: 500;
+}
+
+.correctOption {
+  background-color: #e8f9f6;
+  border-color: #29d13e;
+}
+
+.optionLabel {
+  font-weight: 600;
+  color: #6b686c;
+  min-width: 24px;
+}
+
+.optionText {
+  flex: 1;
+  font-size: 15px;
+  color: #1a1a1a;
+}
+
+.correctBadge {
+  color: #29d13e;
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.textAnswer {
+  padding: 12px 16px;
+  background-color: #e8f9f6;
+  border-radius: 8px;
+  font-size: 15px;
+  color: #1a1a1a;
+  margin-bottom: 16px;
+}
+
+.textAnswer strong {
+  color: #0fb49a;
+}
+
+.explanation {
+  padding: 12px 16px;
+  background-color: #fff9e6;
+  border-left: 3px solid #ffb800;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #1a1a1a;
+  font-family: "Elms sans", sans-serif;
+  line-height: 1.5;
+}
+
+.explanation strong {
+  color: #cc9300;
+}
+
+.questionActions {
+  display: flex;
+  gap: 12px;
+  padding-top: 16px;
+  font-family: "Open sans", sans-serif;
+  border-top: 2px solid #e5e5e7;
+}
+
+.editButton,
+.deleteButton {
+  padding: 8px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.editButton {
+  color: #4e9ae1;
+  background-color: transparent;
+  border: 2px solid #4e9ae1;
+}
+
+.editButton:hover {
+  background-color: #4e9ae1d5;
+  color: white;
+}
+
+.deleteButton {
+  color: #ef4444;
+  background-color: transparent;
+  border: 2px solid #ef4444;
+}
+
+.deleteButton:hover {
+  background-color: #ef4444ce;
+  color: white;
+}
+
+.addAnotherButton {
+  width: 100%;
+  padding: 14px 32px;
+  font-size: 15px;
+  font-weight: 500;
+  color: #612d9e;
+  background-color: transparent;
+  border: 2px dashed #7f54b5;
+  font-family: "open sans", sans-serif;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.addAnotherButton:hover {
+  background-color: #e8cded;
+  border-style: solid;
+}
+
+.message {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #3877b3;
+  font-family: "Open sans", sans-serif;
+  color: white;
+  padding: 12px 22px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 500;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  z-index: 2000;
+  animation: slideDown 0.4s ease forwards,
+             fadeOut 0.5s ease forwards 2s;
+}
+
+@keyframes slideDown {
+  0% {
+    top: -80px;
+    opacity: 0;
+  }
+  100% {
+    top: 20px;
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    top: 0px;
+  }
+}
+
+
+@media (max-width: 768px) {
+  .card {
+    padding: 32px 24px;
+  }
+
+  .header {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .finishButton {
+    width: 100%;
+  }
+
+  .questionCard {
+    padding: 20px;
+  }
+
+  .questionHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .questionActions {
+    flex-direction: column;
+  }
+
+  .editButton,
+  .deleteButton {
+    width: 100%;
+  }
+}

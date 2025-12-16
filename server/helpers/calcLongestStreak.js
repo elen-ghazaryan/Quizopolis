@@ -2,7 +2,6 @@ import { QuizAttempt } from "../models/index.js";
 
 export const calculateLongestStreak = async (userId) => {
   // Get all attempts by this specific user
-  console.log("start")
   const quizAttempts = await QuizAttempt.find({ userId });
   if (!quizAttempts || quizAttempts.length === 0) return 0;
 
@@ -32,6 +31,28 @@ export const calculateLongestStreak = async (userId) => {
     }
   }
 
-  console.log(longestStreak)
   return longestStreak;
 }
+
+// Convert a date to Armenia timezone
+export const toArmeniaDate = (date) => {
+  const d = new Date(date);
+  const utcTime = d.getTime() + d.getTimezoneOffset() * 60000;
+  return new Date(utcTime + 4 * 60 * 60 * 1000); // UTC+4
+};
+
+export const getMonday = (date) => {
+  const d = toArmeniaDate(date);
+  const day = d.getDay(); 
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  d.setHours(0, 0, 0, 0);
+  return d;
+};
+
+export const getSunday = (monday) => {
+  const s = new Date(monday);
+  s.setDate(monday.getDate() + 6);
+  s.setHours(23, 59, 59, 999);
+  return s;
+};

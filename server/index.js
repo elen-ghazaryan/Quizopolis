@@ -8,9 +8,15 @@ import { connectDb, disconnectDb } from "./config/db.js";
 import { quizRouter } from "./routes/quiz.js";
 import { adminQuizRouter } from "./routes/admin-access/admin-quiz.js";
 import { setupSocket } from "./socket/index.js"
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import path from 'path';
 import http from 'http'
 import swaggerUi from 'swagger-ui-express';
 import YAML from 'yamljs'
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const app = express();
 const server = http.createServer(app)
@@ -27,7 +33,7 @@ app.use(
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded());
-app.use(express.static("public/uploads"));
+app.use('/uploads', express.static(path.join(__dirname, "public/uploads")));
 
 //routes
 app.use("/api/auth", authRouter);
