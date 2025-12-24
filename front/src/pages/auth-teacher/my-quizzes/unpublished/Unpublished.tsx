@@ -2,14 +2,16 @@ import { useEffect, useState } from 'react';
 import { BookOpen, Zap, Sparkles, TrendingUp } from 'lucide-react';
 import { QuizList } from '@components/quiz/quiz-list/QuizList'; 
 import { Axios } from '@config/axios';
-import type { IResponse, Quiz } from '@types';
+import type { IResponse, Quiz } from 'app-types/quiz-types';
 import styles from './unpublished.module.css';
+import { useNavigate } from 'react-router-dom';
 
 export const Unpublished = () => {
   const [draftQuizzes, setDraftQuizzes] = useState<Quiz[]>([]);
   const [activeMode, setActiveMode] = useState<'standard' | 'live'>('standard');
   const [isLoading, setIsLoading] = useState(true);
 
+  const navigate = useNavigate()
   const liveQuizzes = draftQuizzes.filter(q => q.mode === 'live');
   const standardQuizzes = draftQuizzes.filter(q => q.mode === 'standard');
 
@@ -26,8 +28,7 @@ export const Unpublished = () => {
   }, []);
 
   const handleViewQuiz = (id: string) => {
-    console.log('Navigate to quiz:', id);
-    // Use your router: navigate(`/quiz/${id}`)
+    navigate(`/layout/quizzes/${id}/admin`)
   };
 
   if (isLoading) {

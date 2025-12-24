@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Search, Heart, BookOpen, User, Calendar, Trash2, Eye, TrendingUp } from "lucide-react";
 import { Axios } from "@config/axios";
 import styles from "./favorites.module.css";
-import type { StudentQuiz } from "@types";
+import type { StudentQuiz } from "app-types/quiz-types";
 
 export const Favorites = () => {
   const [favorites, setFavorites] = useState<StudentQuiz[]>([])
@@ -179,7 +179,7 @@ export const Favorites = () => {
                     <div className={styles.creatorInfo}>
                       {quiz.createdBy.avatar ? (
                         <img
-                          src={`${API_URL}/uploads/${quiz.createdBy.avatar}`}
+                          src={`${API_URL}/uploads/${quiz.createdBy.avatar}` || "default_avatar.png"}
                           alt={quiz.createdBy.username}
                           className={styles.avatar}
                         />

@@ -195,6 +195,17 @@
   line-height: 1.2;       
 }
 
+.forgotPassword {
+  font-family: "Open sans", sans-serif;
+  color: #433e45;
+  font-size: 0.875rem;
+  text-align: center;
+  cursor: pointer;
+  margin-top: 2rem;
+  transition: color 0.2s;
+  font-weight: 500;
+  text-decoration: underline;
+}
 
 /* Animations */
 @keyframes fadeInUp {

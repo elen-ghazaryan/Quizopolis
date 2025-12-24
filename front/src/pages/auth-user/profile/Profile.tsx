@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react"
 import { Axios } from "../../../config/axios"
 import { useContextDispatch, useContextState } from "../../../context/hooks"
 import axios from "axios"
-import type { IErrorResponse, IResponse, IStreakStats } from "../../../types"
+import type { IErrorResponse, IResponse, IStreakStats } from "../../../app-types/quiz-types"
 import styles from "./profile.module.css"
 import { TrendingUp, Calendar, Camera, GraduationCap, BookOpen, CheckCircle, XCircle, Star, Clock, CheckCheck, CalendarCheck, Timer, BookCheck } from "lucide-react"
 
@@ -77,7 +77,7 @@ export const Profile = () => {
          <div className={styles.avatarWrapper}>
             <div className={styles.avatarContainer} onClick={() => fileInputRef.current?.click()}>
               <img 
-                src={`${API_URL}/uploads/${user?.avatar}` || "default_avatar.png"} 
+                src={user.avatar ? `${API_URL}/uploads/${user.avatar}` : "default_avatar.png"} 
                 alt="Profile" 
                 className={styles.avatar}
               />

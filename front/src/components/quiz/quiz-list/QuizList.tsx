@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Filter, Clock, BarChart3, Sparkles } from 'lucide-react';
 import { QuizCard } from '../quiz-card/QuizCard';
 import styles from './quizList.module.css';
-import type { Quiz } from '@types';
+import type { Quiz } from 'app-types/quiz-types';
 
 
 interface QuizListProps {

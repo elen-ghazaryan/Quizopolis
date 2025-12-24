@@ -1,0 +1,201 @@
+
+.questionCard {
+  border: 2px solid #d7b2e6;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 17%);
+}
+
+.questionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  font-family: "Montserrat";
+}
+
+.questionNumber {
+  font-size: 14px;
+  font-weight: 600;
+  color: #871d9d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.questionMeta {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.badge {
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #320469;
+  background-color: #e5f2ff;
+  border-radius: 12px;
+  text-transform: capitalize;
+}
+
+.points {
+  font-size: 14px;
+  font-weight: 500;
+  color: #535252;
+}
+
+.questionContent {
+  margin-bottom: 20px;
+}
+
+.questionText {
+  font-size: 16px;
+  font-weight: 500;
+  color: #1a1a1a;
+  font-family: "Open sans", sans-serif;
+  margin: 0 0 16px 0;
+  line-height: 1.5;
+}
+
+.questionImage {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  border: 1px solid #e5e5e7;
+}
+
+.optionsList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background-color: #f5f5f7;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  transition: all 0.2s;
+  font-family: "Elms sans", sans-serif;
+  font-weight: 500;
+}
+
+.correctOption {
+  background-color: #e8f9f6;
+  border-color: #29d13e;
+}
+
+.optionLabel {
+  font-weight: 600;
+  color: #6b686c;
+  min-width: 24px;
+}
+
+.optionText {
+  flex: 1;
+  font-size: 15px;
+  color: #1a1a1a;
+}
+
+.correctBadge {
+  color: #29d13e;
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.textAnswer {
+  padding: 12px 16px;
+  background-color: #e8f9f6;
+  font-family: "Open sans", sans-serif;
+  border-radius: 8px;
+  font-size: 15px;
+  color: #1a1a1a;
+  margin-bottom: 16px;
+}
+
+.textAnswer strong {
+  color: #21e631;
+}
+
+.explanation {
+  padding: 12px 16px;
+  background-color: #fff9e6;
+  border-left: 3px solid #ffb800;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #1a1a1a;
+  font-family: "Elms sans", sans-serif;
+  line-height: 1.5;
+}
+
+.explanation strong {
+  color: #cc9300;
+}
+
+.questionActions {
+  display: flex;
+  gap: 12px;
+  padding-top: 16px;
+  font-family: "Open sans", sans-serif;
+  border-top: 2px solid #e5e5e7;
+}
+
+.editButton,
+.deleteButton {
+  padding: 8px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.editButton {
+  color: #4e9ae1;
+  background-color: transparent;
+  border: 2px solid #4e9ae1;
+}
+
+.editButton:hover {
+  background-color: #4e9ae1d5;
+  color: white;
+}
+
+.deleteButton {
+  color: #ef4444;
+  background-color: transparent;
+  border: 2px solid #ef4444;
+}
+
+.deleteButton:hover {
+  background-color: #ef4444ce;
+  color: white;
+}
+
+
+@media (max-width: 768px) {
+  .questionCard {
+    padding: 20px;
+  }
+
+  .questionHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .questionActions {
+    flex-direction: column;
+  }
+
+  .editButton,
+  .deleteButton {
+    width: 100%;
+  }
+}

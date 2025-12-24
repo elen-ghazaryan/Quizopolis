@@ -4,7 +4,7 @@ import styles from './signup.module.css';
 import Background from "../../../UI/Background"
 import Modal from '@mui/material/Modal';
 import { useForm, type SubmitHandler } from 'react-hook-form';
-import type { IErrorResponse, SignupUser } from '../../../types';
+import type { IErrorResponse, SignupUser } from '../../../app-types/quiz-types';
 import { Link, useNavigate } from 'react-router-dom';
 import { Axios } from '../../../config/axios';
 import axios from 'axios';

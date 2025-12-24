@@ -265,7 +265,6 @@
   left: 0;
   right: 0;
   height: 224px;
-  background:linear-gradient(135deg, #a691e1 0%, #f3ed6f 100%);
   opacity: 1;
   transition: all 0.5s ease;
   z-index: 0;
@@ -547,16 +546,17 @@
   justify-content: center;
   gap: 0.75rem;
   padding: 1.25rem 2rem;
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-  color: white;
+  background: linear-gradient(135deg, #b9bbf7, #8b5cf6);
+  color: #ffffff;
   border: none;
   border-radius: 16px;
   font-size: 1.1rem;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4);
+  box-shadow:0 10px 25px rgb(118 120 220);
   overflow: hidden;
+
 }
 
 .startBtn::before {

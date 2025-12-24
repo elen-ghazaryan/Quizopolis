@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import {LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid} from "recharts";
 import { TrendingUp, Target, Clock, Award, CheckCircle, BarChart3, Calendar, Zap, Trophy, ThumbsUp, ThumbsDown, Brain, Star} from "lucide-react";
 import { Axios } from "@config/axios";
-import type { UserStats } from "@types";
+import type { UserStats } from "app-types/quiz-types";
 import styles from "./analytics.module.css";
 
 export const Analytics = () => {

@@ -1,0 +1,260 @@
+/* src/components/teacherLobby.module.css */
+
+.container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #cab0dd 0%, #a37df8 100%);
+  padding: 2rem;
+}
+
+.header {
+  max-width: 900px;
+  margin: 0 auto 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.title {
+  font-size: 2.5rem;
+  font-weight: 900;
+  color: white;
+  margin: 0;
+  font-family: "Montserrat", sans-serif;
+  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.statusBadge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-family: "Open Sans", sans-serif;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.connected {
+  background: #37eeb1;
+  box-shadow: 0 0 8px #37eeb1;
+}
+
+.disconnected {
+  background: #ef4444;
+  box-shadow: 0 0 8px #ef4444;
+}
+
+.content {
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.accessCodeSection {
+  background: white;
+  border-radius: 20px;
+  padding: 2rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.sectionTitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #b68ae9;
+  margin: 0 0 1rem 0;
+  font-family: "Montserrat", sans-serif;
+}
+
+.codeDisplay {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.code {
+  flex: 1;
+  font-size: 3rem;
+  font-weight: 900;
+  color: #b68ae9;
+  letter-spacing: 0.5rem;
+  text-align: center;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, #f0e7f7 0%, #e9d5f5 100%);
+  border-radius: 16px;
+  font-family: "Montserrat", monospace;
+}
+
+.copyBtn {
+  padding: 1rem 2rem;
+  background: linear-gradient(135deg, #b68ae9 0%, #9a6fd9 100%);
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-size: 1rem;
+  font-weight: 700;
+  font-family: "Montserrat", sans-serif;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(182, 138, 233, 0.4);
+}
+
+.copyBtn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(182, 138, 233, 0.6);
+}
+
+.copyBtn:disabled {
+  background: #37eeb1;
+  cursor: default;
+}
+
+.instruction {
+  text-align: center;
+  color: #6b7280;
+  font-size: 0.9375rem;
+  margin: 0;
+  font-family: "Open Sans", sans-serif;
+}
+
+.infoCards {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.infoCard {
+  background: white;
+  border-radius: 16px;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+}
+
+.infoCard:hover {
+  transform: translateY(-4px);
+}
+
+.cardIcon {
+  color: rgb(170, 51, 224);
+}
+
+.cardContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.cardLabel {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #6b7280;
+  font-family: "Open Sans", sans-serif;
+}
+
+.cardValue {
+  font-size: 2rem;
+  font-weight: 900;
+  color: #b68ae9;
+  font-family: "Montserrat", sans-serif;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.startBtn {
+  width: 100%;
+  max-width: 400px;
+  padding: 1.5rem 3rem;
+  background: linear-gradient(135deg, #37eeb1 0%, #0fa879 100%);
+  border: none;
+  border-radius: 16px;
+  color: white;
+  font-size: 1.5rem;
+  font-weight: 900;
+  font-family: "Montserrat", sans-serif;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 24px rgba(55, 238, 177, 0.4);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.startBtn:hover:not(:disabled) {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(55, 238, 177, 0.6);
+}
+
+.startBtn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  animation: none;
+}
+
+.hint {
+  color: white;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-align: center;
+  margin: 0;
+  font-family: "Open Sans", sans-serif;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 1rem;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .title {
+    font-size: 2rem;
+  }
+
+  .code {
+    font-size: 2rem;
+    letter-spacing: 0.3rem;
+  }
+
+  .infoCards {
+    grid-template-columns: 1fr;
+  }
+
+  .codeDisplay {
+    flex-direction: column;
+  }
+
+  .copyBtn {
+    width: 100%;
+  }
+}

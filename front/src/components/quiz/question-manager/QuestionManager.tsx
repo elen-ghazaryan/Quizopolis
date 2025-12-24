@@ -1,52 +1,65 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router";
+import { ListX } from "lucide-react";
 import styles from "./QuestionManager.module.css";
 import { AddQuestion } from "../add-question/AddQuestion";
-import type { Question, Quiz } from "../../../types";
-import { ListX } from "lucide-react";
-import { Axios } from "../../../config/axios";
+import { Axios } from "@config/axios";
+import type { Question, TeacherQuizDetail } from "app-types/quiz-types";
+import { QuestionCard } from "../questionCard/QuestionCard";
 
 interface QuestionManagerProps {
-  quiz: Quiz | null;
+  quiz: TeacherQuizDetail | null;
 }
 
 export const QuestionManager: React.FC<QuestionManagerProps> = ({ quiz }) => {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [showAddQuestionPage, setShowAddQuestionPage] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
-  const [message, setMessage] = useState("")
+  const [message, setMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
 
-  const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [questionToDelete, setQuestionToDelete] = useState<string | null>(null)
+  useEffect(() => {
+    if (!quiz?._id) return;
 
+    const loadQuestions = async () => {
+      try {
+        setIsLoading(true);
+        const response = await Axios.get<{payload: {questions: Question[]}}>(`/admin/quiz/${quiz._id}/questions`);
+        const loadedQuestions = response.data.payload.questions
+        setQuestions(loadedQuestions);
+      } catch (error) {
+        console.error('Failed to load questions:', error);
+        setQuestions([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  React.useEffect(() => {
+    loadQuestions();
+  }, [quiz?._id]);
+
+  useEffect(() => {
     if (!message) return;
 
     const timer = setTimeout(() => {
       setMessage("");
-    }, 2500); 
+    }, 3000);
 
     return () => clearTimeout(timer);
   }, [message]);
 
-  const openDeleteModal = (id: string) => {
-    setQuestionToDelete(id)
-    setShowDeleteModal(true)
-  }
-
-  const closeDeleteModal = () => {
-    setShowDeleteModal(false)
-    setQuestionToDelete(null)
-  }
-
-  const confirmToDelete = () => {
-    if(questionToDelete) {
-      handleDeleteQuestion(questionToDelete)
+  const handleQuestionAdded = (question: Question) => {
+    if (editingQuestion) {
+      setQuestions(prev => 
+        prev.map(q => q._id === question._id ? question : q)
+      );
+      setMessage("Question updated successfully!");
+    } else {
+      setQuestions(prev => [...prev, question]);
+      setMessage("Question added successfully!");
     }
-    closeDeleteModal
-  }
-  const handleQuestionAdd = (question: Question) => {
-    setQuestions([...questions, question]);
+    
     setShowAddQuestionPage(false);
     setEditingQuestion(null);
   };
@@ -57,13 +70,14 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({ quiz }) => {
   };
 
   const handleDeleteQuestion = async (questionId: string) => {
-    Axios
-    .delete(`/admin/quiz/${questionId}`)
-    .then(() => setQuestions(prev => prev.filter(q => q._id !== questionId)))
-    .catch(err => {
-      console.error(err)
-      setMessage("Failed to delete, please try later.")
-    })
+    try {
+      await Axios.delete(`/admin/quiz/questions/${questionId}`);
+      setQuestions(prev => prev.filter(q => q._id !== questionId));
+      setMessage("Question deleted successfully!");
+    } catch (error) {
+      console.error('Delete error:', error);
+      setMessage("Failed to delete question. Please try again.");
+    }
   };
 
   const handleCancelAdd = () => {
@@ -76,9 +90,7 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({ quiz }) => {
       setMessage("Please add at least one question before finishing.");
       return;
     }
-    // Navigate to quiz list or preview
-    console.log("Quiz completed with", questions.length, "questions");
-    alert("Quiz created successfully!");
+    navigate("/layout");
   };
 
   if (showAddQuestionPage) {
@@ -86,14 +98,23 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({ quiz }) => {
       <AddQuestion
         quizId={quiz!._id}
         editingQuestion={editingQuestion}
-        onQuestionAdded={handleQuestionAdd}
+        onQuestionAdded={handleQuestionAdded}
         onCancel={handleCancelAdd}
       />
     );
   }
 
+  if (isLoading) {
+    return (
+      <div className={styles.card}>
+        <p>Loading questions...</p>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.card}>
+      {/* Quiz Header */}
       {quiz && (
         <div className={styles.header}>
           <div>
@@ -103,11 +124,17 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({ quiz }) => {
               {questions.length === 1 ? "question" : "questions"}
             </p>
           </div>
-          <button className={styles.finishButton} onClick={handleFinishQuiz}>
+          <button 
+            className={styles.finishButton} 
+            onClick={handleFinishQuiz}
+            disabled={questions.length === 0}
+          >
             Finish Quiz
           </button>
         </div>
       )}
+
+      {/* Empty State */}
       {questions.length === 0 ? (
         <div className={styles.emptyState}>
           <div className={styles.emptyIcon}>
@@ -126,90 +153,20 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({ quiz }) => {
         </div>
       ) : (
         <>
+          {/* Questions List */}
           <div className={styles.questionsList}>
             {questions.map((question, index) => (
-              <div key={question._id} className={styles.questionCard}>
-                <div className={styles.questionHeader}>
-                  <div className={styles.questionNumber}>
-                    Question {index + 1}
-                  </div>
-                  <div className={styles.questionMeta}>
-                    <span className={styles.badge}>
-                      {question.questionType}
-                    </span>
-                    <span className={styles.points}>{question.points} pts</span>
-                  </div>
-                </div>
-
-                <div className={styles.questionContent}>
-                  <p className={styles.questionText}>{question.questionText}</p>
-
-                  {question.image && (
-                    <img
-                      src={`${import.meta.env.VITE_API_URL}/uploads/${question.image}`}
-                      alt="Question"
-                      className={styles.questionImage}
-                    />
-                  )}
-
-                  {(question.questionType === "single-choice" ||
-                    question.questionType === "multiple-choice") &&
-                    question.options && (
-                      <div className={styles.optionsList}>
-                        {question.options.map((option, optIndex) => (
-                          <div
-                            key={optIndex}
-                            className={`${styles.option} ${
-                              option.isCorrect ? styles.correctOption : ""
-                            }`}
-                          >
-                            <span className={styles.optionLabel}>
-                              {String.fromCharCode(65 + optIndex)}.
-                            </span>
-                            <span className={styles.optionText}>
-                              {option.text}
-                            </span>
-                            {option.isCorrect && (
-                              <span className={styles.correctBadge}>✓</span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                  {question.questionType === "short-answer" &&
-                    question.correctAnswer && (
-                      <div className={styles.textAnswer}>
-                        <strong>Correct Answer:</strong>{" "}
-                        {question.correctAnswer}
-                      </div>
-                    )}
-
-                  {question.explanation && (
-                    <div className={styles.explanation}>
-                      <strong>Explanation:</strong> {question.explanation}
-                    </div>
-                  )}
-                </div>
-
-                <div className={styles.questionActions}>
-                  <button
-                    className={styles.editButton}
-                    onClick={() => handleEditQuestion(question)}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    className={styles.deleteButton}
-                    onClick={() => handleDeleteQuestion(question._id)}
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
+              <QuestionCard
+                key={question._id}
+                question={question}
+                index={index}
+                onEdit={handleEditQuestion}
+                onDelete={handleDeleteQuestion}
+              />
             ))}
           </div>
 
+          {/* Add Another Question Button */}
           <button
             className={styles.addAnotherButton}
             onClick={() => setShowAddQuestionPage(true)}
@@ -218,7 +175,13 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({ quiz }) => {
           </button>
         </>
       )}
-      { message && <div className={styles.message}>{message}</div> }
+
+      {/* Message Display */}
+      {message && (
+        <div className={styles.message}>
+          {message}
+        </div>
+      )}
     </div>
   );
 };

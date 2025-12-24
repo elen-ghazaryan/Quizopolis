@@ -2,14 +2,15 @@ import { useEffect, useState } from 'react';
 import { BookOpen, Zap, Sparkles, Target, Clock, TrendingUp, Users, Award, CheckCircle } from 'lucide-react';
 import { QuizList } from '@components/quiz/quiz-list/QuizList';
 import { Axios } from '@config/axios';
-import type { IResponse, TeacherQuizzes, TeacherStats } from '@types';
+import type { IResponse, TeacherQuizzes } from 'app-types/quiz-types';
 import styles from './published.module.css';
+import { useNavigate } from 'react-router-dom';
 
 export const Published = () => {
   const [data, setData] = useState<TeacherQuizzes | null>(null);
   const [activeMode, setActiveMode] = useState<'standard' | 'live'>('standard');
   const [isLoading, setIsLoading] = useState(true);
-
+  const navigate = useNavigate()
   const liveQuizzes = data?.quizzes.filter(q => q.mode === 'live') || [];
   const standardQuizzes = data?.quizzes.filter(q => q.mode === 'standard') || [];
   const stats = data?.stats;
@@ -26,8 +27,7 @@ export const Published = () => {
   }, []);
 
   const handleViewQuiz = (id: string) => {
-    console.log('Navigate to quiz:', id);
-    // Use your router: navigate(`/quiz/${id}`)
+    navigate(`/layout/quizzes/${id}/admin`)
   };
 
   if (isLoading) {
@@ -100,13 +100,13 @@ export const Published = () => {
         </header>
 
         {/* Performance Metrics Section */}
+        {activeMode === 'standard' && stats?.standard && (
         <div className={styles.performanceSection}>
           <h2 className={styles.sectionTitle}>
             <Target size={24} />
             Performance Overview
           </h2>
 
-          {activeMode === 'standard' && stats?.standard && (
             <div className={styles.metricsGrid}>
               <div className={styles.metricCard}>
                 <div className={styles.metricIcon}>
@@ -180,48 +180,8 @@ export const Published = () => {
                 </div>
               </div>
             </div>
-          )}
-
-          {activeMode === 'live' && stats?.live && (
-            <div className={styles.metricsGrid}>
-              <div className={styles.metricCard}>
-                <div className={styles.metricIcon}>
-                  <Users size={24} />
-                </div>
-                <div className={styles.metricInfo}>
-                  <div className={styles.metricValue}>
-                    {stats.live.totalParticipants.toLocaleString()}
-                  </div>
-                  <div className={styles.metricLabel}>Total Participants</div>
-                </div>
-              </div>
-
-              <div className={styles.metricCard}>
-                <div className={styles.metricIcon}>
-                  <Award size={24} />
-                </div>
-                <div className={styles.metricInfo}>
-                  <div className={styles.metricValue}>
-                    {stats.live.avgScore.toFixed(1)}
-                  </div>
-                  <div className={styles.metricLabel}>Avg Score</div>
-                </div>
-              </div>
-
-              <div className={styles.metricCard}>
-                <div className={styles.metricIcon}>
-                  <Zap size={24} />
-                </div>
-                <div className={styles.metricInfo}>
-                  <div className={styles.metricValue}>
-                    {liveQuizzes.length}
-                  </div>
-                  <div className={styles.metricLabel}>Active Sessions</div>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
+        )}
 
         <div className={styles.tabsContainer}>
           <div className={styles.tabs}>

@@ -27,7 +27,7 @@
     /* Path aliases */
     "baseUrl": "src",
     "paths": {
-      "@types": ["types.ts"],
+      "@app-types/*": ["app-types/*"],
       "@components/*": ["components/*"],
       "@pages/*": ["pages/*"],
       "@config/*": ["config/*"]

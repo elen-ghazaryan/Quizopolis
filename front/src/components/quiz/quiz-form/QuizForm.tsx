@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useForm, type SubmitHandler } from "react-hook-form";
 import styles from "./quizForm.module.css";
-import { type IQuizForm, type IResponse, type Quiz } from "../../../types";
+import { type IQuizForm, type IResponse, type Quiz } from "../../../app-types/quiz-types";
 import { Axios } from "../../../config/axios";
 
 interface QuizFormProps {

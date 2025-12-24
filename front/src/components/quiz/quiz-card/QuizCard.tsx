@@ -1,6 +1,6 @@
 import { Eye, Zap, BookOpen, BarChart3 } from 'lucide-react';
 import styles from './quizCard.module.css';
-import type { Quiz } from '@types';
+import type { Quiz } from 'app-types/quiz-types';
 
 interface QuizCardProps {
   quiz: Quiz;

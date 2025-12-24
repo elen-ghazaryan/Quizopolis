@@ -3,15 +3,18 @@ import { Eye, EyeOff, Zap } from 'lucide-react';
 import styles from './login.module.css';
 import Background from "../../../UI/Background"
 import { useForm, type SubmitHandler } from 'react-hook-form';
-import type { IErrorResponse, LoginUser } from '../../../types';
+import type { IErrorResponse, LoginUser } from '../../../app-types/quiz-types';
 import { useNavigate } from 'react-router-dom';
 import { Axios } from '../../../config/axios';
 import axios from 'axios';
+import { EmailModal } from './emailModal';
 
 export const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('')
   const navigate = useNavigate()
+
+  const [openModal, setOpenModal] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginUser>()
   
@@ -28,6 +31,19 @@ export const Login = () => {
       }
     })
   }
+
+  const handleForgotPassword = async (email: string) => {
+    try {
+      await Axios.post("/auth/forgot-password", { email });
+      setOpenModal(false);
+      navigate("/reset-password", { state: { email } });
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        const errorResp = err.response?.data as IErrorResponse;
+        if (errorResp) setError(errorResp.message);
+      }
+    }
+  };
 
   return (
     <div className={styles.container}>
@@ -84,12 +100,21 @@ export const Login = () => {
             </div>
            
            <p className={styles.errorMessage}>{error}</p>
-
+            
+            <p onClick={() => setOpenModal(true)} className={styles.forgotPassword}>Forgot password</p>
+            <EmailModal 
+              open={openModal}
+              onClose={() => setOpenModal(false)}
+              onConfirm={handleForgotPassword}
+            />
+            
+            
             <button className={styles.loginButton}>
               Sign In
             </button>
           </form>
         </div>
+
       </div>
     </div>
   );

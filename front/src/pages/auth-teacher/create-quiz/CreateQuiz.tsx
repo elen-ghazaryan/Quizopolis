@@ -2,7 +2,7 @@ import { useState } from 'react';
 
 import { CheckCircle2 } from 'lucide-react';
 import styles from './createQuiz.module.css';
-import type { Quiz } from '../../../types';
+import type { Quiz } from "app-types/quiz-types";
 import { QuizForm } from '../../../components/quiz/quiz-form/QuizForm';
 import { QuestionManager } from '../../../components/quiz/question-manager/QuestionManager';
 

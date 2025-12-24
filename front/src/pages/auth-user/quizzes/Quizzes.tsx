@@ -1,14 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Search, Filter, BookOpen, User, Calendar, TrendingUp, Award, ArrowUpDown } from "lucide-react";
 import { Axios } from "@config/axios";
-import type { IResponse, StudentQuiz } from "@types";
+import type { IResponse, StudentQuiz } from "app-types/quiz-types";
 import styles from "./quizzes.module.css";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { pickGradient } from "../../../helpers/gradientColors";
 
 
 export const Quizzes = () => {
   const [quizzes, setQuizzes] = useState<StudentQuiz[]>([]);
-  const [filteredQuizzes, setFilteredQuizzes] = useState<StudentQuiz[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -16,6 +16,7 @@ export const Quizzes = () => {
   const [selectedDifficulty, setSelectedDifficulty] = useState("all");
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
 
+  const navigate = useNavigate()
   const API_URL = import.meta.env.VITE_API_URL;
 
   // unique categories
@@ -27,53 +28,40 @@ export const Quizzes = () => {
     Axios.get<IResponse<StudentQuiz[]>>("/quiz/")
       .then((resp) => {
         setQuizzes(resp.data.payload);
-        setFilteredQuizzes(resp.data.payload);
       })
       .catch((err) => console.log(err))
       .finally(() => setIsLoading(false));
   }, []);
 
-  useEffect(() => {
-    let filtered = quizzes;
+  const filteredQuizzes = useMemo(() => {
+  let filtered = quizzes;
 
-    // Search filter
-    if (searchQuery) {
-      filtered = filtered.filter(
-        (quiz) =>
-          quiz.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          quiz.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          quiz.createdBy.username
-            .toLowerCase()
-            .includes(searchQuery.toLowerCase())
-      );
-    }
+  if (searchQuery) {
+    filtered = filtered.filter(
+      quiz =>
+        quiz.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        quiz.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        quiz.createdBy.username.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }
 
-    // Category filter
-    if (selectedCategory !== "all") {
-      filtered = filtered.filter((quiz) => quiz.category === selectedCategory);
-    }
+  if (selectedCategory !== "all") {
+    filtered = filtered.filter(q => q.category === selectedCategory);
+  }
 
-    // Difficulty filter
-    if (selectedDifficulty !== "all") {
-      filtered = filtered.filter(
-        (quiz) => quiz.difficulty === selectedDifficulty
-      );
-    }
+  if (selectedDifficulty !== "all") {
+    filtered = filtered.filter(q => q.difficulty === selectedDifficulty);
+  }
 
-    // Sort by date
-    filtered = filtered.sort((a, b) => {
-      const dateA = new Date(a.createdAt).getTime();
-      const dateB = new Date(b.createdAt).getTime();
-      return sortOrder === "newest" ? dateB - dateA : dateA - dateB;
-    });
+  filtered.sort((a, b) => {
+    const dateA = new Date(a.createdAt).getTime();
+    const dateB = new Date(b.createdAt).getTime();
+    return sortOrder === "newest" ? dateB - dateA : dateA - dateB;
+  });
 
-    setFilteredQuizzes(filtered);
-  }, [searchQuery, selectedCategory, selectedDifficulty, sortOrder, quizzes]);
+  return filtered;
+}, [quizzes, searchQuery, selectedCategory, selectedDifficulty, sortOrder]);
 
-  const handleStartQuiz = (id: string) => {
-    console.log("Start quiz:", id);
-    // Navigate to quiz: navigate(`/quiz/${id}/start`)
-  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -244,7 +232,7 @@ export const Quizzes = () => {
                 className={styles.quizCard}
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
-                <div className={styles.cardBackground}></div>
+                <div className={styles.cardBackground} style={{ background: pickGradient(quiz._id)}}></div>
                 <div className={styles.cardGlow}></div>
 
                 <div className={styles.cardTop}>
@@ -284,7 +272,7 @@ export const Quizzes = () => {
                     <div className={styles.creatorInfo}>
                       {quiz.createdBy.avatar ? (
                         <img
-                          src={`${API_URL}/uploads/${quiz.createdBy.avatar}`}
+                          src={`${API_URL}/uploads/${quiz.createdBy.avatar}` || "default_avatar.png"}
                           alt={quiz.createdBy.username}
                           className={styles.avatar}
                         />
@@ -306,10 +294,9 @@ export const Quizzes = () => {
                 </div>
 
                 <Link
-                  to={`/quizzes/${quiz._id}`}
+                  to={`/layout/quizzes/${quiz._id}`}
                   style={{textDecoration: "none"}}
                   className={styles.startBtn}
-                  onClick={() => handleStartQuiz(quiz._id)}
                 >
                   <span>See more</span>
                   <div className={styles.btnArrow}>→</div>

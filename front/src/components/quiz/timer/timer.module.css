@@ -1,0 +1,30 @@
+.timerBox {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  background: rgba(255, 255, 255, 0.95);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 14px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.timerBox svg {
+  color: #b68ae9;
+}
+
+.timerText {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #282529;
+  font-family: "Montserrat", sans-serif;
+  min-width: 60px;
+}
+
+@media (max-width: 768px) {
+  .timerBox {
+    order: -1;
+    width: 100%;
+    justify-content: center;
+  }
+}

@@ -20,10 +20,10 @@ import {
   Hand,
 } from "lucide-react";
 import styles from "./layout.module.css";
-import { Link, NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet } from "react-router-dom";
 import { useContextDispatch, useContextState } from "../../../context/hooks";
 import { Axios } from "@config/axios";
-import type { IResponse } from "@types";
+import type { IResponse } from "app-types/quiz-types";
 import type { IUser } from "context/types";
 
 export const Layout = () => {
@@ -228,7 +228,13 @@ export const Layout = () => {
         {sidebarOpen && (
           <div className={styles.userInfo}>
             <div className={styles.userAvatar}>
-              <img src={`${API_URL}/uploads/${user?.avatar}` || "default_avatar.png"}  alt="User" />
+              <img 
+                src={user?.avatar?.trim() ? `${API_URL}/uploads/${user.avatar}` : "/default_avatar.png"} 
+                alt="User" 
+                  onError={(e) => {
+                    e.currentTarget.src = "/default_avatar.png"; 
+                  }}  
+              />
             </div>
             <div className={styles.userDetails}>
               <p className={styles.userName}>{user?.username}</p>

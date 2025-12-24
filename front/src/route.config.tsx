@@ -12,6 +12,14 @@ import { Quizzes } from "@pages/auth-user/quizzes/Quizzes";
 import { Logout } from "@pages/auth-user/logout/LogoutModal";
 import { Favorites } from "@pages/auth-user/favorites/Favorites";
 import { Analytics } from "@pages/auth-user/analytics/Analytics";
+import { Settings } from "@pages/auth-user/settings/Settings";
+import { ResetPassword } from "@pages/general/reset-password/ResetPassword";
+import { QuizDetails } from "@pages/auth-user/quizDetails/QuizDetails";
+import { StartQuiz } from "@pages/auth-user/startQuiz/StartQuiz";
+import { QuizAnswers } from "@pages/auth-user/quizAnswers/QuizAnswers";
+import { TeacherQuizDetails } from "@pages/auth-teacher/standardQuizDetail/StandardQuizDetail";
+import { EditQuiz } from "@pages/auth-teacher/editQuiz/EditQuiz";
+import { LiveSessionPage } from "@pages/live-quiz/liveSession/LiveSession";
 
 
 export const router = createBrowserRouter([
@@ -32,8 +40,8 @@ export const router = createBrowserRouter([
     element: <VerifyEmail />
   },
   {
-    path: "/user",
-    element: <VerifyEmail />
+    path: "/reset-password",
+    element: <ResetPassword />
   },
   {
     path: "/layout",
@@ -41,12 +49,19 @@ export const router = createBrowserRouter([
     children: [
       {path: "", element: <Profile />},
       {path: "quizzes", element: <Quizzes />},
+      {path: "quizzes/:id", element: <QuizDetails />},
       {path: "quizzes/create", element: <CreateQuiz />},
+      {path: "quizzes/:id/start", element: <StartQuiz />},
+      {path: "quizzes/attempt/:attemptId/answers", element: <QuizAnswers />},
       {path: "quizzes/published", element: <Published/>},
       {path: "quizzes/unpublished", element: <Unpublished />},
+      {path: "quizzes/:quizId/admin", element: <TeacherQuizDetails />},
+      {path: "quizzes/:quizId/edit", element: <EditQuiz />},
+      {path: "quizzes/:quizId/admin/live", element: <LiveSessionPage />},
       {path: "logout", element: <Logout />},
       {path: "favorites", element: <Favorites />},
       {path: "analytics", element: <Analytics />},
+      {path: "settings", element: <Settings />},
     ]
   }
 ]);

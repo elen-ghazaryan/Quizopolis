@@ -1,0 +1,146 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(
+    circle at top,
+    rgba(99, 102, 241, 0.25),
+    rgba(15, 23, 42, 0.9)
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.card {
+  width: 100%;
+  max-width: 440px;
+  padding: 28px;
+  border-radius: 20px;
+
+  background: linear-gradient(
+    135deg,
+    rgba(17, 24, 39, 0.85),
+    rgba(30, 41, 59, 0.85)
+  );
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+
+  box-shadow:
+    0 25px 50px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+  animation: floatIn 0.3s ease;
+}
+
+.title {
+  margin-bottom: 8px;
+  font-size: 24px;
+  font-weight: 600;
+  color: #f9fafb;
+  font-family: "Elms sans", sans-serif;
+}
+
+.text {
+  margin-bottom: 18px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #9ca3af;
+  font-family: "Montserrat", sans-serif;
+}
+
+.message {
+  margin-bottom: 18px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #f87171;
+  margin-top: 5px;
+  margin-left: 10px;
+  font-family: "Open sans", sans-serif;
+}
+
+.input {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+
+  background: rgba(15, 23, 42, 0.8);
+  color: #f9fafb;
+  font-size: 14px;
+
+  outline: none;
+  transition: border 0.2s, box-shadow 0.2s, background 0.2s;
+}
+
+.input::placeholder {
+  color: #6b7280;
+  font-family: "Montserrat", sans-serif;
+}
+
+.input:focus {
+  border-color: #818cf8;
+  background: rgba(15, 23, 42, 0.95);
+  box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.25);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+  font-family: "Elms sans", sans-serif;
+}
+
+.cancel {
+  padding: 10px 18px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+
+  background: transparent;
+  color: #d1d5db;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s, border 0.2s;
+}
+
+.cancel:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.confirm {
+  padding: 10px 22px;
+  border-radius: 10px;
+  border: none;
+
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+
+  box-shadow: 0 10px 25px rgba(99, 102, 241, 0.35);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.confirm:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px rgba(99, 102, 241, 0.45);
+}
+
+.confirm:active {
+  transform: translateY(0);
+  box-shadow: 0 8px 18px rgba(99, 102, 241, 0.3);
+}
+
+@keyframes floatIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
