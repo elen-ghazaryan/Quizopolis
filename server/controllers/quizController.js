@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { Quiz, Comment, QuizAttempt, User } from "../models/index.js";
+import { Quiz, Comment, QuizAttempt, User, Question } from "../models/index.js";
 import redis from "../config/redis.js";
 
 class QuizController {
@@ -198,7 +198,7 @@ class QuizController {
         createdBy: quiz.createdBy,
         questions: quiz.questions,
         comments: quiz.comments,
-        isFavorite,
+        isFavorite: isFavorite ? true : false,
         createdAt: quiz.createdAt,
       };
 
@@ -228,6 +228,12 @@ class QuizController {
         text: textValue,
       });
       await comment.populate("userId", "username avatar");
+
+      const quiz = await Quiz.findById(quizId)
+      if(!quiz) return res.status(404).json({message: "Quiz not found"})
+
+      quiz.comments.push(comment._id)
+      await quiz.save()
 
       res.status(201).send({ message: "Comment added", payload: { comment } });
     } catch (err) {
@@ -310,6 +316,11 @@ class QuizController {
           .json({ message: "You are not authorized to delete this comment" });
       }
 
+      await Quiz.updateOne(
+        { _id: comment.quizId },
+        { $pull: { comments: comment._id } }
+      );
+
       await comment.deleteOne();
 
       res
@@ -335,17 +346,31 @@ class QuizController {
 
       if (!quiz) return res.status(404).send({ message: "Quiz not found" });
 
-      // Check if user already has an in-progress attempt
-      const existingAttempt = await QuizAttempt.find({
+      const questionsForStudent = quiz.questions.map((q) => ({
+        _id: q._id,
+        questionText: q.questionText,
+        questionType: q.questionType,
+        points: q.points,
+        image: q.image,
+        options: q.options?.map((opt) => ({ text: opt.text })), //not send isCorrect
+      }));
+      // If user already has an in-progress attempt
+      const existingAttempt = await QuizAttempt.findOne({
         userId,
         quizId,
         status: "in_progress",
       });
       if (existingAttempt) {
-        return res.status(400).json({
-          message: "You already have an in-progress attempt",
+        return res.status(200).json({
+          message: "Resumed quiz",
           payload: {
-            attemptId: existingAttempt._id,
+            attempt: {
+              attemptId: existingAttempt._id,
+              quizId: existingAttempt.quizId,
+              startedAt: existingAttempt.startedAt,
+              totalPoints: existingAttempt.totalPoints,
+            },
+            questions: questionsForStudent,
           },
         });
       }
@@ -359,21 +384,13 @@ class QuizController {
         userId,
         totalPoints,
         status: "in_progress",
+        score: 0,
         startedAt: new Date(),
       });
 
       // Initialize answers in Redis
       const redisKey = `attempt${attempt._id}:answers`;
       await redis.set(redisKey, JSON.stringify({}), "EX", 7 * 24 * 60 * 60); // 7 days
-
-      const questionsForStudent = quiz.questions.map((q) => ({
-        _id: q._id,
-        questionText: q.questionText,
-        questionType: q.questionType,
-        points: q.points,
-        image: q.image,
-        options: q.options?.map((opt) => ({ text: opt.text })), //not send isCorrect
-      }));
 
       res.status(201).json({
         message: "Quiz attempt started",
@@ -389,7 +406,7 @@ class QuizController {
       });
     } catch (err) {
       console.error("Failed to start quiz attempt: ", err);
-      res.status(500).josn({ message: "Internal server error" });
+      res.status(500).json({ message: "Internal server error" });
     }
   }
 
@@ -421,6 +438,7 @@ class QuizController {
         textAnswer: textAnswer || null,
       };
 
+
       await redis.set(redisKey, JSON.stringify(draftAnswers));
 
       res.status(200).json({
@@ -451,45 +469,73 @@ class QuizController {
           .json({ message: "Attempt not found or already submitted" });
       }
 
-      // Get draft from Redis
+      // Get draft answers from Redis
       const redisKey = `attempt:${attemptId}:answers`;
       const draftData = await redis.get(redisKey);
 
-      if (!draftData)
+      if (!draftData) {
         return res.status(400).json({ message: "No answers found" });
+      }
 
       const draftAnswers = JSON.parse(draftData);
 
-      // Get questions with correct answers
-      const questions = await Question.find({
-        _id: { $in: Object.keys(draftAnswers) },
-      });
+      // Get all questions for this quiz 
+      const quiz = await Quiz.findById(attempt.quizId).populate('questions');
+      if (!quiz) {
+        return res.status(404).json({ message: "Quiz not found" });
+      }
 
-      // Grade answers and calc score
+      const allQuestions = quiz.questions;
+
+      // Grade answers and calculate score
       let totalScore = 0;
       const gradedAnswers = [];
 
-      for (const question of questions) {
-        const userAnswer = draftAnswers[question._id.toString()];
+      for (const question of allQuestions) {
+        const questionId = question._id.toString();
+        const userAnswer = draftAnswers[questionId];
 
         let isCorrect = false;
         let pointsEarned = 0;
 
-        if (question.type === "multiple-choice") {
-          // Indexes of correct options
+        // If user didn't answer this question
+        if (!userAnswer) {
+          gradedAnswers.push({
+            question: question._id,
+            selectedOptions: [],
+            textAnswer: null,
+            isCorrect: false,
+            pointsEarned: 0,
+          });
+          continue;
+        }
+
+        // Grade based on question type
+        if (question.questionType === "multiple-choice") {
           const correctOptions = question.options
             .map((opt, idx) => (opt.isCorrect ? idx : null))
             .filter((idx) => idx !== null);
 
           const userOptions = userAnswer.selectedOptions || [];
 
+          // Check if user selected exactly the correct options
           isCorrect =
             correctOptions.length === userOptions.length &&
-            correctOptions.every((opt) => userOptions.includes(opt));
+            correctOptions.every((opt) => userOptions.includes(opt)) &&
+            userOptions.every((opt) => correctOptions.includes(opt));
 
           pointsEarned = isCorrect ? question.points : 0;
-        } else if (question.type === "single-choice") {
-          //one correct option
+
+          gradedAnswers.push({
+            question: question._id,
+            selectedOptions: userOptions,
+            textAnswer: null,
+            isCorrect,
+            pointsEarned,
+          });
+
+        } else if (question.questionType === "single-choice") {
+          // Find the one correct option
           const correctOptionIndex = question.options.findIndex(
             (opt) => opt.isCorrect
           );
@@ -497,56 +543,82 @@ class QuizController {
 
           isCorrect = userOption === correctOptionIndex;
           pointsEarned = isCorrect ? question.points : 0;
-        } else if (question.type === "short-answer") {
+
+          gradedAnswers.push({
+            question: question._id,
+            selectedOptions: userAnswer.selectedOptions || [],
+            textAnswer: null,
+            isCorrect,
+            pointsEarned,
+          });
+
+        } else if (question.questionType === "short-answer") {
           const correctText = question.correctAnswer?.trim().toLowerCase();
           const userText = userAnswer.textAnswer?.trim().toLowerCase();
 
           isCorrect = correctText === userText;
           pointsEarned = isCorrect ? question.points : 0;
+
+          gradedAnswers.push({
+            question: question._id,
+            selectedOptions: [],
+            textAnswer: userAnswer.textAnswer || null,
+            isCorrect,
+            pointsEarned,
+          });
         }
 
         totalScore += pointsEarned;
-
-        gradedAnswers.push({
-          question: question._id,
-          selectedOptions: userAnswer.selectedOptions,
-          textAnswer: userAnswer.textAnswer,
-          isCorrect,
-          pointsEarned,
-        });
       }
 
-      const percentage = (totalScore / attempt.totalPoints) * 100;
+      // Calculate percentage
+      const percentage = attempt.totalPoints > 0 
+        ? (totalScore / attempt.totalPoints) * 100 
+        : 0;
 
+      // Calculate time spent
       const completedAt = new Date();
       const timeSpent = Math.floor((completedAt - attempt.startedAt) / 1000);
 
+      // Update attempt
       attempt.answers = gradedAnswers;
       attempt.score = totalScore;
       attempt.percentage = Number(percentage.toFixed(2));
       attempt.timeSpent = timeSpent;
-      attempt.completedAt = new Date();
+      attempt.completedAt = completedAt;
       attempt.status = "completed";
 
       await attempt.save();
+
+      // Clean up Redis
       await redis.del(redisKey);
 
-      // handle daily streak
+      // Handle daily streak
       const user = await User.findById(userId);
-      const today = new Date();
-      const lastQuizDate = new Date(user.lastQuizDate);
+      if (user) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Normalize to start of day
 
-      const diffDays = Math.floor(
-        (today - lastQuizDate) / (1000 * 60 * 60 * 24)
-      );
-      if (diffDays === 1) {
-        user.currentStreak = (user.currentStreak || 0) + 1;
-      } else if (diffDays > 1) {
-        user.currentStreak = 1; //start again
+        if (user.lastQuizDate) {
+          const lastQuizDate = new Date(user.lastQuizDate);
+          lastQuizDate.setHours(0, 0, 0, 0); 
+
+          const diffDays = Math.floor(
+            (today - lastQuizDate) / (1000 * 60 * 60 * 24)
+          );
+
+          if (diffDays === 1) {
+            user.currentStreak = (user.currentStreak || 0) + 1;
+          } else if (diffDays > 1) {
+            user.currentStreak = 1;
+          }
+        } else {
+          user.currentStreak = 1;
+        }
+
+        user.lastQuizDate = today;
+        await user.save();
       }
-
-      user.lastQuizDate = today;
-      await user.save();
 
       res.status(200).json({
         message: "Quiz submitted successfully",
@@ -555,9 +627,8 @@ class QuizController {
           totalPoints: attempt.totalPoints,
           percentage: attempt.percentage,
           timeSpent: timeSpent,
-          correctAnswers: gradedAnswers.filter((a) => a.isCorrect === true)
-            .length,
-          totalQuestions: gradedAnswers.length,
+          correctAnswers: gradedAnswers.filter((a) => a.isCorrect).length,
+          totalQuestions: allQuestions.length,
         },
       });
     } catch (err) {
@@ -594,15 +665,73 @@ class QuizController {
 
       res.status(200).json({
         message: "Quiz resumed",
-        attempt: {
-          attemptId: attempt._id,
-          startedAt: attempt.startedAt,
-        },
-        draftAnswers, // Previously saved answers
-        questions: attempt.quizId.questions,
+        payload: {
+          attempt: {
+            attemptId: attempt._id,
+            startedAt: attempt.startedAt,
+          },
+          draftAnswers, // Previously saved answers
+          questions: attempt.quizId.questions,
+        }
       });
     } catch (err) {
       console.error("Failed to resume quiz:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  }
+
+  async getQuizResults(req, res) {
+    const { attemptId } = req.params;
+    const userId = req.user._id;
+
+    if (!attemptId || !mongoose.Types.ObjectId.isValid(attemptId)) {
+      return res.status(400).json({ message: 'Invalid attempt ID' });
+    }
+
+    try {
+      const attempt = await QuizAttempt.findOne({
+        _id: attemptId,
+        userId,
+        status: "completed",
+      }).populate({
+        path: "answers.question",
+        select: "questionText options correctAnswer",
+      });
+
+      if (!attempt) {
+        return res.status(404).json({ message: "Attempt not found or not completed" });
+      }
+
+      const detailedAnswers = attempt.answers.map(answer => {
+        const question = answer.question;
+        const optionsDetails = question.options.map((option, index) => ({
+          text: option.text,
+          isCorrect: option.isCorrect,
+          userSelected: answer.selectedOptions.includes(index),
+        }));
+
+        return {
+          questionId: question._id,
+          questionText: question.questionText,
+          options: optionsDetails,
+          textAnswer: answer.textAnswer,
+          isCorrect: answer.isCorrect,
+          pointsEarned: answer.pointsEarned,
+          correctAnswer: question.correctAnswer
+        };
+      });
+
+      res.status(200).json({
+        message: "Quiz result retreived.",
+        payload: {
+          totalScore: attempt.score,
+          totalPoints: attempt.totalPoints,
+          percentage: attempt.percentage,
+          answers: detailedAnswers,
+        }
+      });
+    } catch (err) {
+      console.error("Error fetching quiz results:", err);
       res.status(500).json({ message: "Internal server error" });
     }
   }
@@ -627,12 +756,16 @@ class QuizController {
         path: "questions",
         select: "-correctAnswer -options.isCorrect",
       });
+
+      if(!quiz) return res.status(404).json({ message: "Quiz mot found."})
+
       const totalPoints = quiz.questions.reduce((sum, q) => sum + q.points, 0);
 
       const attempt = await QuizAttempt.create({
         quizId,
         userId,
         totalPoints,
+        score: 0,
         status: "in_progress",
         startedAt: new Date(),
       });
@@ -643,59 +776,18 @@ class QuizController {
 
       res.status(201).json({
         message: "Quiz restarted successfully",
-        attemptId: attempt._id,
-        questions: quiz.questions,
+        payload: {
+          attempt: {
+            attemptId: attempt._id,
+            quizId: attempt.quizId,
+            startedAt: attempt.startedAt,
+            totalPoints: attempt.totalPoints
+          },
+          questions: quiz.questions
+        }
       });
     } catch (err) {
       console.error("Failed to restart quiz attempt:", err);
-      res.status(500).json({ message: "Internal server error" });
-    }
-  }
-
-  async startLiveSession(req, res) {
-    const { id: quizId } = req.params;
-    const userId = req.user._id;
-
-    try {
-      const quiz = await Quiz.findById(quizId);
-
-      if (!quiz) return res.status(404).json({ message: "Quiz not found" });
-
-      if (quiz.createdBy.toString() !== userId.toString()) {
-        return res.status(403).json({ message: "Unauthorized" });
-      }
-
-      if (quiz.mode !== "live") {
-        return res.status(400).json({ message: "Quiz is not in live mode" });
-      }
-      if (quiz.isActive && quiz.quizStarted) {
-        return res.status(400).json({ message: "Quiz is already running" });
-      }
-      if (quiz.questions.length === 0) {
-        return res
-          .status(400)
-          .json({ message: "Add questions before starting" });
-      }
-
-      quiz.accessCode = Math.floor(100000 + Math.random() * 900000).toString();
-      quiz.isActive = true;
-      quiz.startTime = new Date();
-      await quiz.save();
-
-      res.status(200).json({
-        message: "Live quiz lobby opened",
-        payload: {
-          quiz: {
-            _id: quiz._id,
-            title: quiz.title,
-            accessCode: quiz.accessCode,
-            isActive: quiz.isActive,
-            totalQuestions: quiz.questions.length,
-          },
-        },
-      });
-    } catch (err) {
-      console.error("Failed to start live session:", err);
       res.status(500).json({ message: "Internal server error" });
     }
   }
@@ -752,7 +844,7 @@ class QuizController {
 
       res.status(200).json({
         message: "Successfully joined quiz",
-        quiz: {
+        payload: {
           _id: quiz._id,
           title: quiz.title,
           description: quiz.description,

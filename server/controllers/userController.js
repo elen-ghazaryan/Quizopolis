@@ -4,6 +4,7 @@ import {
   calculateLongestStreak,
   getMonday,
   getSunday,
+  toArmeniaDate,
 } from "../helpers/calcLongestStreak.js";
 
 class UserController {
@@ -29,6 +30,14 @@ class UserController {
     const isMatch = await bcrypt.compare(oldPassword, user.password);
     if (!isMatch) {
       return res.status(400).send({ message: "Wrong user credentials" });
+    }
+
+    const passwordRegex = /^(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])(?=.*[#?!@$%^&*_.]).{8,}$/;
+
+    if (!passwordRegex.test(newPassword)) {
+      return res.status(400).json({
+        message: "Password must contain minimum 8 characters, at least one upper case letter, one lower case letter, one number and one special character."
+      });
     }
 
     const hashed = await bcrypt.hash(newPassword, 10);
@@ -68,8 +77,27 @@ class UserController {
   async updateProfile(req, res) {
     const userId = req.user._id;
     const updates = req.body;
-    const user = await User.findByIdAndUpdate(userId, updates, { new: true });
-    res.send({ message: "Ok", payload: { user } });
+    const user = await User.findById(userId);
+
+    if(updates.username && updates.username !== user.username) {
+      const existingUser = await User.findOne({ username: updates.username });
+      if (existingUser) {
+        return res.status(400).json({ message: "Username is already taken" });
+      }
+    } 
+
+    if(updates.role && updates.role !== user.role) {
+      if(!['teacher', 'student'].includes(updates.role)) {
+        return res.status(400).json({ message: "Invalid role" });
+      }
+    }
+
+    if (updates.username !== undefined) user.username = updates.username;
+    if (updates.bio !== undefined) user.bio = updates.bio;
+    if (updates.role !== undefined) user.role = updates.role;
+
+    const updatedUser = await user.save();
+    res.send({ message: "Ok", payload: { user: updatedUser } });
   }
 
   async getStreak(req, res) {
@@ -84,51 +112,62 @@ class UserController {
       if (!attempts.length) {
         return res.json({
           message: "Ok",
-          payload:{
+          payload: {
             currentStreak: 0,
             longestStreak: 0,
             lastQuizDate: null,
-            weekActivity: Array(7).fill({ completed: false, date: null }),
-          }
+            weekActivity: Array.from({ length: 7 }, () => ({
+              completed: false,
+              date: null,
+            })),
+          },
         });
       }
 
-      // Convert all completedAt to Armenia timezone
-      const quizDates = attempts.map((a) => getMonday(a.completedAt)); 
+      // Armenia dates (unique days only)
+      const dates = [
+        ...new Set(
+          attempts.map(a =>
+            toArmeniaDate(a.completedAt).toDateString()
+          )
+        ),
+      ].map(d => new Date(d));
+
+      dates.sort((a, b) => a - b);
+
+      // Longest streak
+      const longestStreak = calculateLongestStreak(dates);
 
       // Current streak
-      const today = new Date();
-      const todayArmenia = getMonday(today); 
-      let currentStreak = 1;
-      for (let i = attempts.length - 1; i > 0; i--) {
-        const diffDays = Math.floor(
-          (toArmeniaDate(attempts[i].completedAt).getTime() -
-            toArmeniaDate(attempts[i - 1].completedAt).getTime()) /
-            (1000 * 60 * 60 * 24)
-        );
-        if (diffDays === 1) currentStreak++;
-        else break;
+      const today = new Date(toArmeniaDate(new Date()).toDateString());
+
+      let currentStreak = 0;
+
+      for (let i = dates.length - 1; i >= 0; i--) {
+        const date = new Date(dates[i].toDateString());
+        const diff = (today - date) / (1000 * 60 * 60 * 24);
+
+        if (diff === currentStreak) {
+          currentStreak++;
+        } else if (diff > currentStreak) {
+          break; // streak broken
+        }
       }
 
-      const longestStreak = calculateLongestStreak(
-        attempts.map((a) => toArmeniaDate(a.completedAt))
-      );
-
+      // Last quiz date
       const lastQuizDate = toArmeniaDate(attempts.at(-1).completedAt);
 
       // Weekly activity
-      const monday = getMonday(today);
-      const sunday = getSunday(monday);
-
+      const monday = getMonday(new Date());
       const weekActivity = [];
+
       for (let i = 0; i < 7; i++) {
         const day = new Date(monday);
         day.setDate(monday.getDate() + i);
 
-        const completed = attempts.some((a) => {
-          const quizDate = toArmeniaDate(a.completedAt);
-          return quizDate.toDateString() === day.toDateString();
-        });
+        const completed = dates.some(
+          d => d.toDateString() === day.toDateString()
+        );
 
         weekActivity.push({ date: day, completed });
       }
@@ -140,7 +179,7 @@ class UserController {
           longestStreak,
           lastQuizDate,
           weekActivity,
-        }
+        },
       });
     } catch (err) {
       console.error("Error getting streak:", err);

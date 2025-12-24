@@ -5,7 +5,9 @@ import { env } from "../config/env.js"
 export const setupSocket = (server) => {
   const io = new Server(server, {
     cors: {
-      origin: env.FRONTEND_URL
+      origin: env.FRONTEND_URL,
+      credentials: true,
+      methods: ["GET", "POST"]
     }
   });
 

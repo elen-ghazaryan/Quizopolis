@@ -1,38 +1,25 @@
-import { QuizAttempt } from "../models/index.js";
 
-export const calculateLongestStreak = async (userId) => {
-  // Get all attempts by this specific user
-  const quizAttempts = await QuizAttempt.find({ userId });
-  if (!quizAttempts || quizAttempts.length === 0) return 0;
+export const calculateLongestStreak = (dates) => {
+  if (!dates.length) return 0;
 
-  // Extract unique dates (one per day)
-  const uniqueDates = [...new Set(
-    quizAttempts.map(a => new Date(a.createdAt).toDateString())
-  )];
+  let longest = 1;
+  let current = 1;
 
-  // Sort from oldest to newest
-  uniqueDates.sort((a, b) => new Date(a) - new Date(b));
+  for (let i = 1; i < dates.length; i++) {
+    const diff =
+      (dates[i] - dates[i - 1]) / (1000 * 60 * 60 * 24);
 
-  // Count consecutive day streaks
-  let longestStreak = 1;
-  let currentStreak = 1;
-
-  for (let i = 1; i < uniqueDates.length; i++) {
-    const prev = new Date(uniqueDates[i - 1]);
-    const curr = new Date(uniqueDates[i]);
-
-    const diffDays = (curr - prev) / (1000 * 60 * 60 * 24);
-
-    if (diffDays === 1) {
-      currentStreak++;
-      longestStreak = Math.max(longestStreak, currentStreak);
+    if (diff === 1) {
+      current++;
+      longest = Math.max(longest, current);
     } else {
-      currentStreak = 1;
+      current = 1;
     }
   }
 
-  return longestStreak;
-}
+  return longest;
+};
+
 
 // Convert a date to Armenia timezone
 export const toArmeniaDate = (date) => {

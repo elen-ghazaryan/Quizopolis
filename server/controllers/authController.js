@@ -129,6 +129,9 @@ class AuthController {
     const user = await User.findOne({email})
 
     if(!user) return res.send({ message: "If this email is registered, a reset link has been sent."})
+    if(!user.isEmailVerified) {
+      return res.send({ message: "Please verify your email before requesting a password reset."})
+    }
 
     try {
       await sendResetPswLink(user)

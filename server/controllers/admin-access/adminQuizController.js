@@ -2,6 +2,7 @@ import { Question, Quiz, QuizAttempt } from "../../models/index.js";
 import fs from "fs";
 import path from "path";
 import mongoose from "mongoose";
+import redis from "../../config/redis.js";
 
 class AdminQuizController {
   async createQuiz(req, res) {
@@ -106,11 +107,11 @@ class AdminQuizController {
 
     try {
       const quiz = await Quiz.findById(quizId)
-        .populate("createdBy", "username email")
+        .populate("createdBy", "username avatar")
         .populate("questions")
         .populate({
           path: "comments",
-          populate: { path: "userId", select: "username" },
+          populate: { path: "userId", select: "username, avatar" },
         });
 
       if (!quiz) {
@@ -146,7 +147,7 @@ class AdminQuizController {
 
       res.status(200).json({
         message: "Quiz retrieved successfully",
-        payload: { quiz: payload },
+        payload: payload,
       });
     } catch (err) {
       console.error("Failed to get admin quiz by ID:", err);
@@ -165,7 +166,7 @@ class AdminQuizController {
     try {
       const quiz = await Quiz.findById(quizId)
         .populate("createdBy", "_id")
-        .populate("participants", "username email");
+        .populate("participants", "avatar username");
 
       if (!quiz) {
         return res.status(404).json({ message: "Quiz not found" });
@@ -215,7 +216,7 @@ class AdminQuizController {
 
       res.status(200).json({
         message: "Quiz stats retrieved successfully",
-        stats,
+        payload: stats,
       });
     } catch (err) {
       console.error("Error fetching quiz stats:", err);
@@ -290,7 +291,7 @@ class AdminQuizController {
 
       res
         .status(200)
-        .json({ message: "Quiz updated successfully", payload: { quiz } });
+        .json({ message: "Quiz updated successfully", payload: quiz });
     } catch (err) {
       console.error("Failed to update quiz:", err);
       res.status(500).json({ message: "Internal server error" });
@@ -358,7 +359,8 @@ class AdminQuizController {
     let options;
     if (optionsRaw) {
       try {
-        options = typeof optionsRaw === 'string' ? JSON.parse(optionsRaw) : optionsRaw;
+        options =
+          typeof optionsRaw === "string" ? JSON.parse(optionsRaw) : optionsRaw;
       } catch (err) {
         return res.status(400).send({ message: "Invalid options format." });
       }
@@ -395,12 +397,10 @@ class AdminQuizController {
           .send({ message: "One option must be marked as correct." });
       }
       if (correctOptions.length > 1) {
-        return res
-          .status(400)
-          .send({
-            message:
-              "Only one option can be marked as correct for single-choice questions.",
-          });
+        return res.status(400).send({
+          message:
+            "Only one option can be marked as correct for single-choice questions.",
+        });
       }
     } else if (questionType === "multiple-choice") {
       if (!options || !Array.isArray(options) || options.length < 2) {
@@ -435,6 +435,7 @@ class AdminQuizController {
       const questionData = {
         quizId,
         questionText,
+        questionType,
         options,
         correctAnswer,
         points: points || 1,
@@ -556,7 +557,10 @@ class AdminQuizController {
       let options;
       if (optionsRaw) {
         try {
-          options = typeof optionsRaw === 'string' ? JSON.parse(optionsRaw) : optionsRaw;
+          options =
+            typeof optionsRaw === "string"
+              ? JSON.parse(optionsRaw)
+              : optionsRaw;
         } catch (err) {
           return res.status(400).send({ message: "Invalid options format." });
         }
@@ -579,7 +583,7 @@ class AdminQuizController {
             }
           });
         }
-        image = req.file.filename
+        image = req.file.filename;
       } else if (removeImage && question.image) {
         const oldImagePath = path.join(
           process.cwd(),
@@ -657,7 +661,10 @@ class AdminQuizController {
 
       res
         .status(200)
-        .send({ message: "Question updated successfully.", payload: {question} });
+        .send({
+          message: "Question updated successfully.",
+          payload: { question },
+        });
     } catch (err) {
       console.error("Failed to update question:", err);
       res.status(500).send({ message: "Internal server error." });
@@ -671,17 +678,18 @@ class AdminQuizController {
       const quizzes = await Quiz.find({
         createdBy: userId,
         isPublished: true,
-      }).select("_id title description category difficulty questions mode createdAt");
+      }).select(
+        "_id title description category difficulty questions mode createdAt"
+      );
 
       const standardQuizIds = quizzes
-        .filter(q => q.mode === "standard")
-        .map(q => q._id);
+        .filter((q) => q.mode === "standard")
+        .map((q) => q._id);
 
       const liveQuizIds = quizzes
-        .filter(q => q.mode === "live")
-        .map(q => q._id);
+        .filter((q) => q.mode === "live")
+        .map((q) => q._id);
 
-      
       // stats
 
       let standardStats = {
@@ -690,12 +698,12 @@ class AdminQuizController {
         avgPercentage: 0,
         avgTimeSpent: 0,
         totalCompleted: 0,
-        completionRate: 0
+        completionRate: 0,
       };
 
       let liveStats = {
         totalParticipants: 0,
-        avgScore: 0
+        avgScore: 0,
       };
 
       // standard quiz stats
@@ -710,10 +718,10 @@ class AdminQuizController {
               avgPercentage: { $avg: "$percentage" },
               avgTimeSpent: { $avg: "$timeSpent" },
               totalCompleted: {
-                $sum: { $cond: [{ $eq: ["$status", "completed"] }, 1, 0] }
-              }
-            }
-          }
+                $sum: { $cond: [{ $eq: ["$status", "completed"] }, 1, 0] },
+              },
+            },
+          },
         ]);
 
         if (stat.length > 0) {
@@ -726,45 +734,33 @@ class AdminQuizController {
             totalCompleted: s.totalCompleted,
             completionRate: s.totalAttempts
               ? s.totalCompleted / s.totalAttempts
-              : 0
+              : 0,
           };
         }
       }
 
       // live quiz stats
       if (liveQuizIds.length > 0) {
-        const live = await Participant.aggregate([
-          { $match: { quizId: { $in: liveQuizIds } } },
-          {
-            $group: {
-              _id: null,
-              totalParticipants: { $sum: 1 },
-              avgScore: { $avg: "$score" }
-            }
-          }
-        ]);
+        const liveQuizzes = await Quiz.find({ _id: { $in: liveQuizIds } })
+          .select("participants")
 
-        if (live.length > 0) {
-          const l = live[0];
-          liveStats = {
-            totalParticipants: l.totalParticipants,
-            avgScore: l.avgScore || 0
-          };
-        }
+      const totalParticipants = liveQuizzes.reduce((sum, q) => sum + q.participants.length, 0);
+
+      liveStats = {
+          totalParticipants: totalParticipants,
+        };
       }
 
-      
       res.send({
         message: "All published quizzes",
         payload: {
           quizzes,
           stats: {
             standard: standardStats,
-            live: liveStats
-          }
-        }
+            live: liveStats,
+          },
+        },
       });
-
     } catch (err) {
       console.log("Failed to get own published quizzes:", err);
       res.status(500).send("Internal server error");
@@ -778,7 +774,9 @@ class AdminQuizController {
       const quizzes = await Quiz.find({
         createdBy: userId,
         isPublished: false,
-      }).select("_id title description category difficulty questions mode createdAt");
+      }).select(
+        "_id title description category difficulty questions mode createdAt"
+      );
 
       res.send({ message: "All unpublished quizzes", payload: { quizzes } });
     } catch (err) {
@@ -835,6 +833,59 @@ class AdminQuizController {
       res.status(500).json({ message: "Internal server error" });
     }
   }
+
+  async startLiveSession(req, res) {
+    const { id: quizId } = req.params;
+    const userId = req.user._id;
+
+    try {
+      const quiz = await Quiz.findById(quizId);
+
+      if (!quiz) return res.status(404).json({ message: "Quiz not found" });
+
+      if (quiz.createdBy.toString() !== userId.toString()) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      if (quiz.mode !== "live") {
+        return res.status(400).json({ message: "Quiz is not in live mode" });
+      }
+      if (quiz.isActive && quiz.quizStarted) {
+        return res.status(400).json({ message: "Quiz is already running" });
+      }
+      if (quiz.questions.length === 0) {
+        return res
+          .status(400)
+          .json({ message: "Add questions before starting" });
+      }
+
+      quiz.participants = []
+      quiz.accessCode = Math.floor(100000 + Math.random() * 900000).toString();
+      quiz.isActive = true;
+      quiz.startTime = new Date();
+      await quiz.save();
+
+      await redis.del(`live:${quizId}:state`);
+      await redis.del(`live:${quizId}:scores`);
+
+      res.status(200).json({
+        message: "Live quiz lobby opened",
+        payload: {
+          quiz: {
+            _id: quiz._id,
+            title: quiz.title,
+            accessCode: quiz.accessCode,
+            isActive: quiz.isActive,
+            totalQuestions: quiz.questions.length,
+          },
+        },
+      });
+    } catch (err) {
+      console.error("Failed to start live session:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  }
+
 }
 
 export default new AdminQuizController();

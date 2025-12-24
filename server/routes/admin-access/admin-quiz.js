@@ -29,3 +29,7 @@ adminQuizRouter.get("/:quizId/questions", controller.getAllQuestions);
 adminQuizRouter.get("/questions/:questionId", controller.getQuestionById);
 adminQuizRouter.put("/questions/:questionId", upload.single('image'), controller.updateQuestion);
 adminQuizRouter.delete("/questions/:questionId", controller.deleteQuestion);
+
+
+//take live quiz
+adminQuizRouter.post("/:id/live/start", controller.startLiveSession);
